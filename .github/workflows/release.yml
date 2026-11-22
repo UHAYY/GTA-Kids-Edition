@@ -36,6 +36,22 @@ jobs:
       - name: Installa le dipendenze
         run: npm ci
 
+      # electron-builder scarica "winCodeSign", che contiene 2 link simbolici
+      # macOS che Windows non puo' creare senza privilegi: pre-estraiamo il
+      # pacchetto nella cache ignorando quei 2 file (inutili per Windows).
+      - name: Pre-estrai winCodeSign (workaround symlink)
+        shell: pwsh
+        run: |
+          $v = "2.6.0"
+          $cache = Join-Path $env:LOCALAPPDATA "electron-builder\Cache\winCodeSign"
+          New-Item -ItemType Directory -Force -Path (Join-Path $cache "winCodeSign-$v") | Out-Null
+          $zip = Join-Path $cache "winCodeSign-$v.7z"
+          Invoke-WebRequest "https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-$v/winCodeSign-$v.7z" -OutFile $zip
+          & ".\node_modules\7zip-bin\win\x64\7za.exe" x -y "-o$(Join-Path $cache "winCodeSign-$v")" $zip | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Host "Ignoro i link simbolici macOS non creati" }
+          Remove-Item $zip -Force
+          exit 0
+
       - name: Compila l'app Windows
         run: npx electron-builder --win nsis portable
 
