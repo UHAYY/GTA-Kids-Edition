@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Auto Avventure — Kids City</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/node_modules/three/build/three.module.js",
+        "three/addons/": "/node_modules/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="top-left">
+      <div class="badge">🪙 <span id="coins">0</span></div>
+      <div class="badge">⭐ <span id="missions">0</span></div>
+      <div class="badge" id="hearts">❤️❤️❤️</div>
+    </div>
+    <div id="mission-box">
+      <div id="mission-title" data-i18n="hud_mission">Missione</div>
+      <div id="mission-text" data-i18n="hud_dots">…</div>
+    </div>
+    <canvas id="minimap" width="180" height="180"></canvas>
+    <div id="stars" class="hidden"></div>
+    <div id="gunhint" class="hidden" data-i18n="gun_hint">🔫 <b>F</b> = sparare</div>
+    <div id="robbery" class="hidden">
+      <div id="robbery-fill"></div>
+      <span id="robbery-label" data-i18n="robbery_ongoing">Rapina in corso…</span>
+    </div>
+    <div id="speed" class="hidden">0 km/h</div>
+    <div id="prompt" class="hidden" data-i18n="prompt_enter_car">Premi <b>E</b> per salire in macchina</div>
+    <div id="toast" class="hidden"></div>
+    <div id="help" data-i18n="help_line">
+      <b>W A S D</b> muoviti &nbsp;·&nbsp; <b>Shift</b> corri &nbsp;·&nbsp; <b>E</b> entra / esci dalla macchina
+    </div>
+  </div>
+
+  <!-- schermata MORTO / ARRESTATO -->
+  <div id="bigmsg" class="hidden"></div>
+
+  <!-- bolla del barbiere -->
+  <div id="bubble" class="hidden" data-i18n="bubble_barber">✂️ Premi <b>E</b> per personalizzare l'avatar</div>
+
+  <!-- negozio della concessionaria -->
+  <div id="dealer" class="hidden">
+    <div class="cpanel">
+      <h2 data-i18n="shop_title">🚗 Concessionaria da Stella</h2>
+      <div id="d-coins">🪙 Monete: 0</div>
+      <div id="dgrid"></div>
+      <p class="dhint" data-i18n="shop_hint">Raccogli le monete per la città e compra auto sempre più veloci!</p>
+      <button id="d-done" data-i18n="btn_done">✔ Fatto</button>
+    </div>
+  </div>
+
+  <!-- menu di personalizzazione -->
+  <div id="customizer" class="hidden">
+    <div class="cpanel">
+      <h2 data-i18n="barb_title">✂️ Barbiere da Tony</h2>
+      <div id="ctabs"></div>
+      <div id="cbody">
+        <div class="slider-row">
+          <span data-i18n="label_height">📏 Altezza</span>
+          <input id="c-height" type="range" min="120" max="205" step="1" value="175">
+          <b><span id="h-val">175</span> cm</b>
+        </div>
+        <div class="slider-row">
+          <span data-i18n="label_weight">⚖️ Peso</span>
+          <input id="c-weight" type="range" min="40" max="120" step="1" value="65">
+          <b><span id="w-val">65</span> kg</b>
+        </div>
+        <div id="c-build">Costituzione: atletica</div>
+      </div>
+      <div id="cgrid"></div>
+      <button id="c-done" data-i18n="btn_done">✔ Fatto</button>
+    </div>
+  </div>
+
+  <!-- menu iniziale -->
+  <div id="menu" class="hidden">
+    <h1 data-i18n="game_name">🚗 Auto Avventure</h1>
+    <p class="subtitle" data-i18n="menu_sub">Guida per la città, consegna pizze e pacchetti, aiuta i vicini e raccogli le monete.
+      Qui non si litiga con nessuno: solo buone azioni e tanta guida!</p>
+    <button id="btn-play" data-i18n="btn_play">▶ GIOCA</button>
+    <p class="hint" data-i18n="menu_hint">Si gioca con la tastiera: <b>W A S D</b> per muoverti, <b>E</b> per salire in macchina.
+      Passa dal <b>Barbiere da Tony</b> per creare il tuo avatar!</p>
+    <div id="langs" aria-label="lingua / language"></div>
+  </div>
+
+  <!-- caricamento -->
+  <div id="loading">
+    <h1 data-i18n="game_name">🚗 Auto Avventure</h1>
+    <p data-i18n="loading_city">Caricamento della città…</p>
+    <div id="loadbar"><div id="loadfill"></div></div>
+    <p id="loaderr" class="hidden"></p>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

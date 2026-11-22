@@ -1,0 +1,430 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #8fd3f0;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Segoe UI', sans-serif;
+}
+
+#game { display: block; width: 100%; height: 100%; }
+
+.hidden { display: none !important; }
+
+/* ---------- HUD ---------- */
+#hud { position: fixed; inset: 0; pointer-events: none; }
+
+#top-left { position: absolute; top: 14px; left: 14px; display: flex; gap: 10px; }
+
+.badge {
+  background: rgba(255, 255, 255, .9);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .18);
+}
+
+#mission-box {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, .92);
+  border-radius: 16px;
+  padding: 10px 18px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .2);
+  max-width: 62%;
+}
+#mission-title {
+  font-weight: bold;
+  color: #e65100;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+#mission-text { font-size: 18px; color: #222; }
+
+/* minimappa in alto a destra */
+#minimap {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 180px;
+  height: 180px;
+  border-radius: 16px;
+  border: 3px solid rgba(255, 255, 255, .92);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .22);
+  background: #3f97e8;
+}
+
+/* stelle della polizia, sotto la minimappa */
+#stars {
+  position: absolute;
+  top: 206px;
+  right: 14px;
+  background: rgba(255, 255, 255, .92);
+  border-radius: 14px;
+  padding: 6px 12px;
+  font-size: 20px;
+  letter-spacing: 2px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .18);
+}
+
+#gunhint {
+  position: absolute;
+  top: 262px;
+  right: 14px;
+  background: rgba(255, 235, 59, .95);
+  color: #4e3b00;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .2);
+}
+
+/* barra di avanzamento della rapina */
+#robbery {
+  position: absolute;
+  bottom: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 30px;
+  background: rgba(255, 255, 255, .9);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .25);
+}
+#robbery-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ffb300, #ff7043);
+  transition: width .1s linear;
+}
+#robbery-label {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  line-height: 30px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #4e2600;
+}
+
+/* schermata MORTO / ARRESTATO */
+#bigmsg {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 110px;
+  font-weight: bold;
+  letter-spacing: 12px;
+  color: #fff;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, .6);
+  animation: bigmsg-in .35s ease-out;
+}
+#bigmsg.morto { background: radial-gradient(circle, rgba(255, 87, 34, .75), rgba(127, 20, 0, .9)); }
+#bigmsg.arrestato { background: radial-gradient(circle, rgba(30, 90, 168, .75), rgba(6, 30, 70, .9)); }
+@keyframes bigmsg-in {
+  from { opacity: 0; transform: scale(1.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+#speed {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  background: rgba(255, 255, 255, .9);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .18);
+}
+
+#prompt {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 235, 59, .95);
+  color: #4e3b00;
+  padding: 10px 20px;
+  border-radius: 14px;
+  font-size: 18px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .25);
+}
+
+#toast {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(76, 175, 80, .95);
+  color: #fff;
+  padding: 14px 26px;
+  border-radius: 16px;
+  font-size: 24px;
+  font-weight: bold;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .3);
+}
+
+#help {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  background: rgba(255, 255, 255, .75);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #333;
+}
+
+/* ---------- Bolla del barbiere ---------- */
+#bubble {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: #fff;
+  color: #1e5aa8;
+  border: 3px solid #1e5aa8;
+  border-radius: 16px;
+  padding: 10px 18px;
+  font-size: 17px;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+  white-space: nowrap;
+}
+#bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #1e5aa8;
+}
+
+/* ---------- Menu di personalizzazione ---------- */
+#customizer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 24px;
+  pointer-events: none;
+}
+.cpanel {
+  pointer-events: auto;
+  width: 420px;
+  max-height: 92%;
+  overflow: auto;
+  background: rgba(255, 255, 255, .97);
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+.cpanel h2 { color: #1e5aa8; text-align: center; margin-bottom: 12px; }
+
+#ctabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.ctab {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+  color: #1e5aa8;
+  background: #e8f2fc;
+  border: 2px solid #b9d7f2;
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+.ctab.sel { background: #1e5aa8; color: #fff; }
+
+#cbody { margin-bottom: 12px; }
+.slider-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 70px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  color: #333;
+}
+.slider-row input { width: 100%; accent-color: #1e5aa8; }
+#c-build {
+  text-align: center;
+  background: #e8f2fc;
+  border-radius: 10px;
+  padding: 6px;
+  font-size: 14px;
+  color: #1e5aa8;
+  font-weight: bold;
+}
+
+#cgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+  max-height: 300px;
+  overflow: auto;
+}
+.card {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  color: #333;
+  background: #f4f8fc;
+  border: 2px solid #dbe7f3;
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.card.sel { background: #fff3d6; border-color: #ff9800; font-weight: bold; }
+
+#c-done,
+#d-done {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  background: #4caf50;
+  border: none;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 4px 0 #2e7d32;
+}
+#c-done:active,
+#d-done:active { transform: scale(.98); }
+
+/* ---------- Concessionaria ---------- */
+#dealer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 24px;
+  pointer-events: none;
+}
+#d-coins {
+  text-align: center;
+  background: #fff3d6;
+  color: #8a5a00;
+  font-weight: bold;
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+#dgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dhint {
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 12px;
+}
+
+/* ---------- Caricamento ---------- */
+#loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: linear-gradient(180deg, #2196f3, #03a9f4);
+  color: #fff;
+}
+#loading h1 { font-size: 44px; text-shadow: 0 4px 0 rgba(0, 0, 0, .2); }
+#loadbar {
+  width: 320px;
+  height: 22px;
+  background: rgba(255, 255, 255, .3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+#loadfill {
+  width: 0%;
+  height: 100%;
+  background: #ff9800;
+  border-radius: 999px;
+  transition: width .2s;
+}
+#loaderr { color: #ffcdd2; font-weight: bold; max-width: 500px; }
+
+/* ---------- Menu iniziale ---------- */
+#menu {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(33, 150, 243, .85), rgba(3, 169, 244, .72));
+  color: #fff;
+  padding: 20px;
+}
+#menu h1 { font-size: 56px; text-shadow: 0 4px 0 rgba(0, 0, 0, .2); }
+#menu .subtitle { font-size: 20px; max-width: 560px; text-shadow: 0 2px 4px rgba(0, 0, 0, .3); }
+#menu .hint { font-size: 15px; opacity: .9; }
+
+#btn-play {
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  background: #ff9800;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 60px;
+  box-shadow: 0 6px 0 #e65100, 0 10px 20px rgba(0, 0, 0, .3);
+  transition: transform .1s;
+}
+#btn-play:hover { transform: scale(1.05); }
+#btn-play:active { transform: scale(.97); }
+
+/* selettore della lingua (bandierine nel menu) */
+#langs {
+  pointer-events: auto;
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.langbtn {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 26px;
+  line-height: 1;
+  background: rgba(255, 255, 255, .85);
+  border: 3px solid transparent;
+  border-radius: 12px;
+  padding: 6px 10px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .2);
+  transition: transform .1s;
+}
+.langbtn:hover { transform: scale(1.1); }
+.langbtn.sel {
+  border-color: #ff9800;
+  background: #fff3d6;
+  transform: scale(1.08);
+}
