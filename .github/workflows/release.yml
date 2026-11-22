@@ -53,7 +53,7 @@ jobs:
           exit 0
 
       - name: Compila l'app Windows
-        run: npx electron-builder --win nsis portable
+        run: npx electron-builder --win nsis portable --publish never
 
       - name: Crea la release e allega i .exe
         uses: softprops/action-gh-release@v2
