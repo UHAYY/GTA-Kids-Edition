@@ -1,124 +1,127 @@
 # 🚗 Auto Avventure — Kids City
 
-Videogioco 3D in stile GTA pensato per i bambini: guida per una città colorata,
-consegna pizze e pacchi, aiuta i vicini e raccogli monete.
-**Nessuna violenza vera, niente contenuti per adulti: qui la polizia ti arresta
-e ti cura, non ti spara!**
+**English** | [Italiano](README.it.md)
 
-> 🌍 Il gioco è disponibile in **italiano, inglese, spagnolo e russo**:
-> scegli la lingua con le bandierine nel menu principale.
+A GTA-style 3D video game designed for kids: drive around a colorful city,
+deliver pizzas and parcels, help your neighbors and collect coins.
+**No real violence, no adult content: here the police arrest you and take
+care of you, they don't shoot you!**
 
-## 🎮 Cosa c'è nel gioco
+> 🌍 The game is available in **Italian, English, Spanish and Russian**:
+> pick your language with the flags in the main menu.
 
-- **Una città 3D generata proceduralmente**: isolotti, negozi con insegne,
-  parchi, panchine, lampioni, alberi, pedoni e traffico… e un mare con la
-  spiaggia tutt'intorno.
-- **Missioni di buon vicinato**: ritira e consegna pizze, pacchi, regali,
-  dolci e medicine seguendo la freccia gialla e il faro luminoso. Ogni
-  consegna completata vale **60 monete di mancia**. 🪙
-- **Monete raccoglibili per la città**: quando finiscono, ricompaiono dopo
-  un attimo.
-- **Concessionaria da Stella**: 10 tipi di auto (citycar, berlina, SUV, van,
-  coupé, cabriolet…) con prezzi e velocità di punta realistiche. Compra quelle
-  più veloci con le monete raccolte!
-- **🔧 Officina**: gli scontri rovinano l'auto (diventa sempre più lenta e,
-  se è molto rovinata, sbuffa fumo nero dal cofano). In officina la rimetti
-  a nuova pagando la manodopera.
-- **🅿️ Garage sotterranei**: 4 parcheggi con l'ingresso in superficie e la
-  sala piena di posti sotto il prato. Scendi con l'auto dalla discesa… e sono
-  anche il posto perfetto per **perdere la polizia**!
-- **🚨 Rapine e stelle della polizia**: ruba alla banca, alla gioielleria o al
-  supermarket (resta fermo davanti alla porta 4 secondi), ma le stelle salgono
-  e la polizia ti insegue. Nasconditi in un garage o nell'auto della polizia
-  non ci si tocca: se ti arrestano (o ti mettono K.O.)… **ospedale**, con
-  conto di ambulanza e ricovero! 🚑
-- **✂️ Barbiere da Tony**: personalizza il tuo avatar a piacere — tagli di
-  capelli, colori, occhiali di ogni misura, barbe, magliette, pantaloni,
-  scarpe, altezza e peso.
-- **Camera libera**: tieni premuto il **tasto destro** del mouse per girarti
-  e guardarti intorno.
+## 🎮 What's in the game
 
-## ⌨️ Comandi
+- **A procedurally generated 3D city**: blocks, shops with signs, parks,
+  benches, street lamps, trees, pedestrians and traffic… plus a sea with a
+  beach all around.
+- **Good-neighbor missions**: pick up and deliver pizzas, parcels, gifts,
+  sweets and medicine by following the yellow arrow and the glowing beacon.
+  Every completed delivery is worth **60 bonus coins**. 🪙
+- **Collectible coins around the city**: when they run out, they reappear
+  after a short while.
+- **Stella's car dealership**: 10 types of cars (city car, sedan, SUV, van,
+  coupé, convertible…) with realistic prices and top speeds. Buy the faster
+  ones with the coins you collect!
+- **🔧 Repair shop**: crashes wear your car out (it gets slower and slower
+  and, when badly damaged, puffs black smoke from the hood). At the repair
+  shop you can make it good as new — for a labor fee.
+- **🅿️ Underground garages**: 4 parking sites with a street-level entrance
+  and a hall full of spots beneath the grass. Drive down the ramp… they're
+  also the perfect place to **shake off the police**!
+- **🚨 Heists and police stars**: rob the bank, the jewelry store or the
+  supermarket (stand still in front of the door for 4 seconds), but your
+  wanted stars go up and the police will chase you. Hiding in a garage is
+  allowed — the cops can't touch you there. If they arrest you (or knock
+  you out)… **hospital**, with an ambulance and hospitalization bill! 🚑
+- **✂️ Tony's barbershop**: customize your avatar however you like —
+  haircuts, colors, glasses of every size, beards, T-shirts, pants, shoes,
+  height and weight.
+- **Free camera**: hold the **right mouse button** to turn around and look
+  about.
 
-| Tasto | Azione |
-|-------|--------|
-| `W A S D` | muoviti / guida |
-| `Shift` | corri (a piedi) |
-| `E` | sali / scendi dalla macchina, interagisci (negozi, panchine, riparazioni) |
-| `F` | sparare (solo quando la polizia ti dà la caccia 🔫) |
-| `Spazio` | salta |
-| `Tasto destro` (tenuto) | ruota la camera |
-| `Esc` | chiudi i pannelli |
+## ⌨️ Controls
 
-## 🚀 Come si avvia
+| Key | Action |
+|-----|--------|
+| `W A S D` | move / drive |
+| `Shift` | run (on foot) |
+| `E` | get in / out of the car, interact (shops, benches, repairs) |
+| `F` | shoot (only while the police are after you 🔫) |
+| `Space` | jump |
+| `Right mouse button` (held) | rotate the camera |
+| `Esc` | close panels |
 
-Serve [Node.js](https://nodejs.org) installato. Poi:
+## 🚀 Getting started
+
+You need [Node.js](https://nodejs.org) installed. Then:
 
 ```bash
 npm install
 npm start
 ```
 
-Si apre la finestra di **Electron** con il gioco.
+An **Electron** window opens with the game.
 
 <details>
-<summary>Per giocare dal browser (sviluppo)</summary>
+<summary>To play in the browser (development)</summary>
 
 ```bash
 node dev-server.js
 ```
 
-Poi apri <http://localhost:8080/game/index.html>.
+Then open <http://localhost:8080/game/index.html>.
 
 </details>
 
-## 🌍 Cambiare lingua
+## 🌍 Changing language
 
-Nel menu principale clicca una bandierina: 🇮🇹 italiano · 🇬🇧 inglese ·
-🇪🇸 spagnolo · 🇷🇺 russo. La scelta viene salvata e vale anche per le insegne
-dei negozi nel mondo 3D.
+In the main menu, click a flag: 🇮🇹 Italian · 🇬🇧 English ·
+🇪🇸 Spanish · 🇷🇺 Russian. Your choice is saved and applies to the shop
+signs in the 3D world too.
 
-## 🛠️ Tecnologia
+## 🛠️ Technology
 
-- **Electron** per il client desktop
-- **Three.js** per il mondo 3D (città low-poly generata proceduralmente)
-- Personaggi animati con rig FBX e clamp di animazioni (corsa, salto, sedersi…)
-- Effetti sonori generati con WebAudio, niente file esterni
-- Interfaccia tradotta in 4 lingue (`game/js/i18n.js`)
+- **Electron** for the desktop client
+- **Three.js** for the 3D world (procedurally generated low-poly city)
+- Characters animated with FBX rigs and animation clamping (running,
+  jumping, sitting…)
+- Sound effects generated with WebAudio, no external files
+- UI translated into 4 languages (`game/js/i18n.js`)
 
-## 📁 Struttura
+## 📁 Structure
 
 ```
-main.js            → processo principale Electron (finestra del gioco)
-dev-server.js      → mini web server per giocare dal browser in sviluppo
+main.js            → Electron main process (game window)
+dev-server.js      → tiny web server to play in the browser while developing
 game/
-  index.html       → pagina del gioco (HUD, menu, pannelli)
-  style.css        → stile dell'interfaccia
+  index.html       → game page (HUD, menu, panels)
+  style.css        → UI styles
   js/
-    main.js        → ciclo di gioco, menu, negozi, orchestrazione
-    i18n.js        → traduzioni (it/en/es/ru) e selettore lingua
-    city.js        → generazione della città e collisioni
-    player.js      → personaggio, guida arcade, danni dell'auto
-    garage.js      → parcheggi sotterranei con rampa e sala
-    workshop.js    → officina con riparazione a pagamento
-    dealer.js      → concessionaria con autosalone e podi
-    barber.js      → barbiere con palo a strisce
-    hospital.js    → ospedale (spawn dopo arresto/K.O.)
-    heists.js      → banca, gioielleria e supermarket rapinabili
-    police.js      → stelle, inseguimenti e arresti
-    missions.js    → sistema di missioni di consegna
-    npc.js         → pedoni con ragdoll morbido
-    traffic.js     → auto del traffico
-    smoke.js       → fumo nero dal cofano dell'auto rovinata
-    hud.js         → interfaccia (toast, stelle, cuori, missioni)
-    minimap.js     → minimappa in alto a destra
-    avatar.js      → costruzione e personalizzazione dell'avatar
-    assets.js      → caricamento di modelli e animazioni FBX
-    input.js       → tastiera e pressi "una volta sola"
-    audio.js       → effetti sonori WebAudio
-3d/                → modelli e animazioni FBX (personaggio e auto)
+    main.js        → game loop, menu, shops, orchestration
+    i18n.js        → translations (it/en/es/ru) and language picker
+    city.js        → city generation and collisions
+    player.js      → character, arcade driving, car damage
+    garage.js      → underground parking lots with ramp and hall
+    workshop.js    → repair shop with paid repairs
+    dealer.js      → car dealership with showroom and podiums
+    barber.js      → barbershop with striped pole
+    hospital.js    → hospital (spawn after arrest / K.O.)
+    heists.js      → robbable bank, jewelry store and supermarket
+    police.js      → wanted stars, chases and arrests
+    missions.js    → delivery mission system
+    npc.js         → pedestrians with soft ragdoll
+    traffic.js     → traffic cars
+    smoke.js       → black smoke from a damaged car's hood
+    hud.js         → UI (toasts, stars, hearts, missions)
+    minimap.js     → minimap in the top-right corner
+    avatar.js      → avatar building and customization
+    assets.js      → FBX model and animation loading
+    input.js       → keyboard and "press once" inputs
+    audio.js       → WebAudio sound effects
+3d/                → FBX models and animations (character and cars)
 ```
 
-## 📜 Licenza
+## 📜 License
 
-[MIT](LICENSE) — gioca, studia e modifica quanto vuoi!
+[MIT](LICENSE) — play, study and modify it as much as you like!
