@@ -1,7 +1,7 @@
 {
   "name": "grand-theft-auto-kids-edition",
   "productName": "Auto Avventure - Kids City",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Videogioco 3D in stile GTA pensato per i bambini: guida in città, consegna pizze e pacchi, aiuta i vicini e raccogli monete. Nessuna violenza!",
   "main": "main.js",
   "license": "MIT",
@@ -28,12 +28,25 @@
     ],
     "asar": false,
     "extraFiles": [
-      { "from": "dlls", "to": "." }
+      {
+        "from": "dlls",
+        "to": "."
+      }
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
