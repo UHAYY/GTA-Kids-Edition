@@ -27,6 +27,9 @@
       "package.json"
     ],
     "asar": false,
+    "extraFiles": [
+      { "from": "dlls", "to": "." }
+    ],
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64"] },
