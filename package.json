@@ -1,17 +1,43 @@
 {
   "name": "grand-theft-auto-kids-edition",
   "productName": "Auto Avventure - Kids City",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Videogioco 3D in stile GTA pensato per i bambini: guida in città, consegna pizze e pacchi, aiuta i vicini e raccogli monete. Nessuna violenza!",
   "main": "main.js",
   "license": "MIT",
+  "author": "UHAYY",
+  "repository": "https://github.com/UHAYY/GTA-Kids-Edition",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable"
   },
   "devDependencies": {
-    "electron": "^33.2.0"
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
   },
   "dependencies": {
     "three": "^0.169.0"
+  },
+  "build": {
+    "appId": "com.uhayy.kids-city",
+    "files": [
+      "main.js",
+      "game/**/*",
+      "3d/**/*",
+      "package.json"
+    ],
+    "asar": false,
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Auto Avventure — Kids City"
+    }
   }
 }

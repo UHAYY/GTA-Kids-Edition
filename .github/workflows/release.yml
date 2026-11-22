@@ -1,0 +1,46 @@
+# -------------------------------------------------------------
+# Release automatiche
+#
+# Si attiva SOLO quando viene creato un tag tipo "v1.0.0":
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Compila l'app su Windows con electron-builder e allega alla
+# GitHub Release due file .exe:
+#   - installer NSIS (setup, con scelta della cartella)
+#   - versione portable (un singolo .exe, scarichi e giochi)
+# -------------------------------------------------------------
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # serve per creare la release e allegare i file
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v4
+
+      - name: Prepara Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: Compila l'app Windows
+        run: npx electron-builder --win nsis portable
+
+      - name: Crea la release e allega i .exe
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          generate_release_notes: true
