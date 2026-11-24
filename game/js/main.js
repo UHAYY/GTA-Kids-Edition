@@ -48,7 +48,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8fd3f0);
 scene.fog = new THREE.Fog(0x9fd8f5, 170, 560);
 
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 900);
+// near a 0.3 (e non 0.1): con far a 900 migliora molto la precisione della
+// profondità e le strade/marciapiedi lontani tremitano molto meno (z-fighting)
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.3, 900);
 
 // ---------- luci ----------
 scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x9c8f6b, 1.05));
@@ -220,7 +222,11 @@ async function init () {
   // un'altra, così la città resta viva
   function stealTrafficCar (c) {
     traffic.splice(traffic.indexOf(c), 1);
-    for (const nc of createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 1)) {
+    // quella che riparte nasce lontana da te e dalle altre auto:
+    // niente auto che sbucano addosso a qualcuno
+    const avoid = [{ x: player.pos.x, z: player.pos.z }];
+    for (const t of traffic) avoid.push({ x: t.car.position.x, z: t.car.position.z });
+    for (const nc of createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 1, avoid)) {
       traffic.push(nc);
     }
     takeCar(c.car, true);
@@ -234,7 +240,9 @@ async function init () {
 
   const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
   const talk = createTalk({ npcs, player, camera, promptEl: null });
-  const traffic = createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 10);
+  // le auto del traffico nascono lontane dal giocatore e dalla sua auto
+  const traffic = createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 10,
+    [{ x: player.pos.x, z: player.pos.z }, { x: 24, z: 30 }]);
   const missions = createMissions(scene, pois);
   const hud = createHUD();
   const minimap = createMinimap(el('minimap'), city.map);

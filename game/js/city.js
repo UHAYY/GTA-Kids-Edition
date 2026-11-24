@@ -140,8 +140,12 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     new THREE.ShapeGeometry(ring),
     new THREE.MeshLambertMaterial({ color: 0xede2ae })
   );
+  // Nota sulle quote: i piani quasi sovrapposti (prato, sabbia, marciapiedi,
+  // asfalto, marcature) sono distanziati di almeno 2 cm — a vista basterebbe
+  // di meno, ma così la profondità del buffer non li fa "tremare"
+  // (z-fighting) in lontananza.
   sand.rotation.x = -HPI;
-  sand.position.y = 0.015;
+  sand.position.y = 0.03;
   sand.receiveShadow = true;
   scene.add(sand);
 
@@ -174,7 +178,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
       umbMats[(u + 2) % umbMats.length]
     );
     towel.rotation.x = -HPI;
-    towel.position.set(1.9, 0.02, 0.3);
+    towel.position.set(1.9, 0.06, 0.3);
     g.add(towel);
     g.position.set(ux, 0, uz);
     batch(pole);
@@ -231,11 +235,11 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
 
   for (const c of roadCenters) {
     // marciapiedi (leggermente più larghi, sotto le strade)
-    put(new THREE.PlaneGeometry(ROAD + 4, CITY_SIZE), sidewalkMat, c, 0.005, 0, { rx: -HPI, receive: true });
-    put(new THREE.PlaneGeometry(CITY_SIZE, ROAD + 4), sidewalkMat, 0, 0.008, c, { rx: -HPI, receive: true });
+    put(new THREE.PlaneGeometry(ROAD + 4, CITY_SIZE), sidewalkMat, c, 0.02, 0, { rx: -HPI, receive: true });
+    put(new THREE.PlaneGeometry(CITY_SIZE, ROAD + 4), sidewalkMat, 0, 0.025, c, { rx: -HPI, receive: true });
     // asfalto
-    put(new THREE.PlaneGeometry(ROAD, CITY_SIZE), roadMat, c, 0.02, 0, { rx: -HPI, receive: true });
-    put(new THREE.PlaneGeometry(CITY_SIZE, ROAD), roadMat, 0, 0.025, c, { rx: -HPI, receive: true });
+    put(new THREE.PlaneGeometry(ROAD, CITY_SIZE), roadMat, c, 0.045, 0, { rx: -HPI, receive: true });
+    put(new THREE.PlaneGeometry(CITY_SIZE, ROAD), roadMat, 0, 0.05, c, { rx: -HPI, receive: true });
   }
 
   // ---------- dettagli della strada ----------
@@ -268,10 +272,10 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     for (const c of roadCenters) {
       const gv = new THREE.PlaneGeometry(0.3, len);
       scaleUV(gv, 1, len / 4);
-      put(gv, dashMatV, c, 0.033, (a + b) / 2, { rx: -HPI });
+      put(gv, dashMatV, c, 0.07, (a + b) / 2, { rx: -HPI });
       const gh = new THREE.PlaneGeometry(len, 0.3);
       scaleUV(gh, len / 4, 1);
-      put(gh, dashMatH, (a + b) / 2, 0.033, c, { rx: -HPI });
+      put(gh, dashMatH, (a + b) / 2, 0.07, c, { rx: -HPI });
     }
   }
 
@@ -289,10 +293,10 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   for (const x of roadCenters) {
     for (const z of roadCenters) {
       const off = ROAD / 2 + 1.1;
-      if (x > roadCenters[0]) put(new THREE.PlaneGeometry(2.2, 10), zebraMatNS, x - off, 0.034, z, { rx: -HPI, receive: true });
-      if (x < roadCenters[roadCenters.length - 1]) put(new THREE.PlaneGeometry(2.2, 10), zebraMatNS, x + off, 0.034, z, { rx: -HPI, receive: true });
-      if (z > roadCenters[0]) put(new THREE.PlaneGeometry(10, 2.2), zebraMatEW, x, 0.034, z - off, { rx: -HPI, receive: true });
-      if (z < roadCenters[roadCenters.length - 1]) put(new THREE.PlaneGeometry(10, 2.2), zebraMatEW, x, 0.034, z + off, { rx: -HPI, receive: true });
+      if (x > roadCenters[0]) put(new THREE.PlaneGeometry(2.2, 10), zebraMatNS, x - off, 0.075, z, { rx: -HPI, receive: true });
+      if (x < roadCenters[roadCenters.length - 1]) put(new THREE.PlaneGeometry(2.2, 10), zebraMatNS, x + off, 0.075, z, { rx: -HPI, receive: true });
+      if (z > roadCenters[0]) put(new THREE.PlaneGeometry(10, 2.2), zebraMatEW, x, 0.075, z - off, { rx: -HPI, receive: true });
+      if (z < roadCenters[roadCenters.length - 1]) put(new THREE.PlaneGeometry(10, 2.2), zebraMatEW, x, 0.075, z + off, { rx: -HPI, receive: true });
     }
   }
 
@@ -461,17 +465,17 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
       if (parks.has(i * GRID + j)) {
         // parco: prato, un laghetto O una fontana, viale anulare, fiori, alberi
         put(new THREE.PlaneGeometry(BLOCK - 4, BLOCK - 4), lawnMat,
-          x0 + BLOCK / 2, 0.03, z0 + BLOCK / 2, { rx: -HPI, receive: true });
+          x0 + BLOCK / 2, 0.05, z0 + BLOCK / 2, { rx: -HPI, receive: true });
 
         const cx = x0 + BLOCK / 2;
         const cz = z0 + BLOCK / 2;
 
         // viale anulare di ghiaia chiara
-        put(new THREE.RingGeometry(6.2, 7.6, 28), pathMat, cx, 0.04, cz, { rx: -HPI });
+        put(new THREE.RingGeometry(6.2, 7.6, 28), pathMat, cx, 0.065, cz, { rx: -HPI });
 
         if (Math.random() < 0.5) {
           // laghetto
-          put(new THREE.CircleGeometry(5, 24), waterMat, cx, 0.05, cz, { rx: -HPI });
+          put(new THREE.CircleGeometry(5, 24), waterMat, cx, 0.085, cz, { rx: -HPI });
         } else {
           // fontana: vasca di pietra, acqua e gettone centrale
           put(new THREE.CylinderGeometry(2.8, 3.1, 0.7, 20), stoneMat, cx, 0.35, cz, { cast: true });
