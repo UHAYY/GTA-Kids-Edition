@@ -53,6 +53,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
+      "include": "build/installer.nsh",
       "shortcutName": "Auto Avventure — Kids City"
     }
   }
