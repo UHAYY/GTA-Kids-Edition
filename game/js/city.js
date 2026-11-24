@@ -607,6 +607,9 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   const tlRed = new THREE.MeshLambertMaterial({ color: 0x5a1a1a, emissive: 0x111111 });
   const tlYellow = new THREE.MeshLambertMaterial({ color: 0x5a4a1a, emissive: 0x111111 });
   const tlGreen = new THREE.MeshLambertMaterial({ color: 0x1a5a2a, emissive: 0x111111 });
+  // incroci con le luci: chiavi "x|z" del centro dell'incrocio (le usa il
+  // traffico per sapere dove fermarsi)
+  const lights = new Set();
   function addTrafficLight (x, z) {
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 3.2, 6), poleMat);
@@ -631,6 +634,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     for (const z of roadCenters) {
       if (Math.random() < 0.4) continue;
       addTrafficLight(x + 7.4, z + 7.4);
+      lights.add(x + '|' + z);
     }
   }
 
@@ -654,6 +658,10 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     cycleLight(tlRed, tlTime >= 9, 0xff2222);
     updateSea(dt);
   };
+
+  // fase del semaforo per il traffico: 0 = verde, 1 = giallo, 2 = rosso
+  // (tutte le luci della città sono sincronizzate: materiali in comune)
+  const lightPhase = () => (tlTime < 7.5 ? 0 : tlTime < 9 ? 1 : 2);
 
   // punti di interesse: incroci con un po' di variazione
   for (const x of roadCenters) {
@@ -727,7 +735,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     clouds.push({ g, speed: 0.8 + Math.random() * 1.2 });
   }
 
-  return { colliders, pois, clouds, roadCenters, benches, updateCity, CITY_SIZE, HALF, map: { canvas: mapCanvas, S: mapS, off: mapOff } };
+  return { colliders, pois, clouds, roadCenters, benches, updateCity, lightPhase, lights, CITY_SIZE, HALF, map: { canvas: mapCanvas, S: mapS, off: mapOff } };
 }
 
 // Spinge un cerchio (pos, radius) fuori da tutti gli ostacoli.

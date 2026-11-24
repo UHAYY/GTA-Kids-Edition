@@ -110,7 +110,7 @@ async function init () {
   // sopra le rampe dei garage il prato è ritagliato: dall'esterno si vede
   // la discesa, come negli ingressi dei garage veri
   const city = buildCity(scene, SKIP, GARAGE_SITES.map(([gx, gz]) => groundHoleFor(gx, gz)));
-  const { colliders, pois, clouds, roadCenters, benches, updateCity } = city;
+  const { colliders, pois, clouds, roadCenters, benches, updateCity, lightPhase, lights } = city;
   const hospital = createHospital(scene, colliders);
 
   const barber = createBarbershop(scene, assets.createEric, colliders);
@@ -594,6 +594,7 @@ async function init () {
   menuEl.classList.remove('hidden');
   uiState = 'menu';
   window.__game = { scene, camera, player, barber, dealer, workshop, smoke, assets, npcs, traffic, benches, missions, police, heists,
+    lights, lightPhase, city, // debug semafori e mondo
     // debug: forzare lo stato (es. test del conto dell'ospedale)
     __debug: { setUiState: s => { uiState = s; } } };
   window.__game.renderer = renderer; // per diagnosticare le prestazioni
@@ -810,7 +811,7 @@ async function init () {
       updateBarberBubble();
       updateNPCs(npcs, dt, colliders, carCircles, player.pos, playerCarCircles,
         () => { sfx.bump(); hud.toast(tr('npc_bump')); });
-      updateTraffic(traffic, dt, playerPos);
+      updateTraffic(traffic, dt, playerPos, lights, lightPhase);
       updateCoins(dt, t, playerPos);
       updateMissions(missions, dt, playerPos, hud, sfx);
       hud.updateToast(dt);
@@ -870,7 +871,7 @@ async function init () {
       player.rig.group.rotation.y = player.yaw;
       player.rig.updateDecos();
       updateNPCs(npcs, dt, colliders);
-      updateTraffic(traffic, dt, player.pos);
+      updateTraffic(traffic, dt, player.pos, lights, lightPhase);
 
       const front = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw)).multiplyScalar(1.55);
       const desired = player.pos.clone().add(front).add(new THREE.Vector3(0, 1.55, 0));
@@ -883,14 +884,14 @@ async function init () {
       player.rig.group.rotation.y = player.yaw;
       player.rig.updateDecos();
       updateNPCs(npcs, dt, colliders);
-      updateTraffic(traffic, dt, player.pos);
+      updateTraffic(traffic, dt, player.pos, lights, lightPhase);
     } else if (uiState === 'talking') {
       // stai parlando con un passante: il mondo vive, tu sei fermo e la
       // camera guarda l'NPC da dietro alle tue spalle
       if (!talk.isOpen()) uiState = 'playing'; // chiuso col pulsante o Esc
       updateNPCs(npcs, dt, colliders, carCircles, player.pos, playerCarCircles,
         () => { sfx.bump(); hud.toast(tr('npc_bump')); });
-      updateTraffic(traffic, dt, player.pos);
+      updateTraffic(traffic, dt, player.pos, lights, lightPhase);
       updateCoins(dt, t, player.pos);
       updateMissions(missions, dt, player.pos, hud, sfx);
       hud.updateToast(dt);

@@ -46,6 +46,7 @@ export function createTraffic (scene, roadCenters, carPrefabs, playerPrefab, cou
       car, ring,
       seg: bestSeg,
       t: bestT,
+      rc: roadCenters, // tutte le strade: per trovare i semafori avanti
       cruise: 6 + Math.random() * 3,
       speed: 0,
       still: 0, // quanto tempo è ferma: per sciogliere gli ingorghi
@@ -79,7 +80,10 @@ function headingOf (s) {
   return s.bx > s.ax ? Math.PI / 2 : -Math.PI / 2;
 }
 
-export function updateTraffic (cars, dt, playerPos) {
+// strada larga 12: metà strada (dove inizia l'incrocio)
+const ROAD_HALF = 6;
+
+export function updateTraffic (cars, dt, playerPos, lights, lightPhase) {
   for (const c of cars) {
     const s = segmentOf(c);
     const len = Math.abs(s.bx - s.ax) + Math.abs(s.bz - s.az);
@@ -102,12 +106,39 @@ export function updateTraffic (cars, dt, playerPos) {
       consider(o.car.position.x - lx, o.car.position.z - lz);
     }
 
+    // semafori: se al prossimo incrocio con le luci non è verde, fermati
+    // sulla linea di stop (7,5 m prima del centro). Se sei a meno di 0,5 m
+    // dalla linea (o l'hai già passata) sei impegnato: attraversa e via.
+    let lightStop = false;
+    if (lights && lightPhase && lightPhase() !== 0) {
+      const vertical = Math.abs(s.bz - s.az) > 0.1;
+      const dir = vertical ? (s.bz > s.az ? 1 : -1) : (s.bx > s.ax ? 1 : -1);
+      const axis = vertical ? lz : lx;
+      const road = vertical ? s.ax : s.az; // la strada che stai percorrendo
+      let dLight = Infinity;
+      for (const rc of c.rc) {
+        const d = (rc - axis) * dir; // quanto è avanti l'incrocio
+        // solo il primo incrocio avanti (a metà segmento ce ne sono tanti)
+        if (d < ROAD_HALF || d > 52) continue;
+        if (lights.has(road + '|' + rc)) dLight = Math.min(dLight, d);
+      }
+      if (dLight !== Infinity) {
+        const stopLine = dLight - 7.5;
+        if (stopLine < 10.5 && stopLine > 0.5) {
+          blocked = true;
+          lightStop = true;
+          gap = Math.min(gap, stopLine); // la linea di stop è l'ostacolo
+        }
+      }
+    }
+
     // anti-ingorgo: dopo 2,5 s ferma avanza piano ma SOLO se c'è spazio
     // (gap > 4,6 m): così non si compenetra mai nell'auto davanti. Se invece
     // è davvero incastrata (ingorgo a incrocio), indietreggia un attimo.
+    // Al semaforo rosso invece resta ferma educatamente: niente retromarcia.
     c.still = blocked && c.speed < 0.3 ? c.still + dt : 0;
     c.rev = Math.max(0, (c.rev || 0) - dt);
-    if (blocked && c.still > 6 && gap < 4.6) c.rev = 1.4;
+    if (!lightStop && blocked && c.still > 6 && gap < 4.6) c.rev = 1.4;
     let target = c.cruise;
     if (blocked) target = (c.still > 2.5 && gap > 4.6) ? c.cruise * 0.35 : 0;
     if (c.rev > 0) target = -1.5;
