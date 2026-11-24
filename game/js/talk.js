@@ -54,6 +54,7 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
   const keyRow = el('talk-keyrow');
   const keyEl = el('talk-key');
   const keyBtn = el('talk-keysave');
+  const modelEl = el('talk-model');
   const bubble = el('talk-bubble');
   const tmpV = new THREE.Vector3();
 
@@ -186,8 +187,11 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
       },
       body: JSON.stringify({
         model: getModel(),
-        max_tokens: 120,
+        max_tokens: 600,
         temperature: 0.8,
+        // i modelli "reasoning" bruciano i token ragionando prima di
+        // rispondere: chiediamo di ragionare poco e di non mostrarlo
+        reasoning: { effort: 'low', exclude: true },
         messages: [{ role: 'system', content: sys }, ...messages]
       })
     });
@@ -197,7 +201,12 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
       throw new Error(msg);
     }
     const data = await res.json();
-    return (data.choices?.[0]?.message?.content || '').trim();
+    const choice = data.choices?.[0];
+    const reply = (choice?.message?.content || '').trim();
+    if (!reply) {
+      throw new Error('risposta vuota (finish=' + (choice?.finish_reason || '?') + ')');
+    }
+    return reply;
   }
 
   async function send (text) {
@@ -238,6 +247,7 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
   function showKeyRow () {
     keyRow.classList.remove('hidden');
     keyEl.value = getKey();
+    modelEl.value = getModel();
   }
 
   function tryTalk () {
@@ -259,13 +269,12 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
     logEl.innerHTML = '';
     addMsg('', tr('talk_who', { name: nameOf(npc, i) }), 'npc who');
     statusEl.textContent = '';
-    keyRow.classList.toggle('hidden', !!getKey());
     panel.classList.remove('hidden');
     inputEl.placeholder = tr('talk_say');
     closeBtn.textContent = tr('talk_close');
-    // quando manca la chiave mostro comunque subito il campo per incollarla
-    if (!getKey()) showKeyRow();
-    else startMic();
+    // la riga chiave+modello resta sempre disponibile (per cambiarle)
+    showKeyRow();
+    if (getKey()) startMic();
     setTimeout(() => inputEl.focus(), 50);
     return true;
   }
@@ -291,13 +300,22 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
   keyBtn.addEventListener('click', () => {
     const k = keyEl.value.trim();
     if (!/^sk-or-/.test(k)) { setStatus(tr('talk_key_bad')); return; }
-    try { localStorage.setItem(KEY_STORE, k); } catch {}
+    try {
+      localStorage.setItem(KEY_STORE, k);
+      const m = modelEl.value.trim();
+      if (m) localStorage.setItem(MODEL_STORE, m);
+      else localStorage.removeItem(MODEL_STORE);
+    } catch {}
     keyRow.classList.add('hidden');
     setStatus(tr('talk_key_ok'));
     if (micAvailable) startMic();
   });
-  // mentre scrivi nel campo chiave non far partire comandi di gioco
+  // mentre scrivi nei campi non far partire comandi di gioco
   keyEl.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') keyBtn.click();
+  });
+  modelEl.addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.key === 'Enter') keyBtn.click();
   });

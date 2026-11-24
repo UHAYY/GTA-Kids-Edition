@@ -93,6 +93,7 @@ const STR = {
   talk_key_save: { it: '💾 Salva chiave', en: '💾 Save key', es: '💾 Guardar clave', ru: '💾 Сохранить ключ' },
   talk_key_ok: { it: '✅ Chiave salvata! Adesso parla!', en: '✅ Key saved! Now talk!', es: '✅ ¡Clave guardada! ¡Habla ahora!', ru: '✅ Ключ сохранён! Теперь говори!' },
   talk_key_bad: { it: '❌ La chiave non sembra valida: controlla e riprova.', en: '❌ The key does not look valid: check it and try again.', es: '❌ La clave no parece válida: revísala y prueba otra vez.', ru: '❌ Ключ не похож на правильный: проверь и попробуй снова.' },
+  talk_model: { it: '🤖 Modello AI:', en: '🤖 AI model:', es: '🤖 Modelo de IA:', ru: '🤖 ИИ-модель:' },
   talk_ai_error: { it: '❌ Problema con l\'AI ({msg}). Riprova!', en: '❌ AI problem ({msg}). Try again!', es: '❌ Problema con la IA ({msg}). ¡Prueba otra vez!', ru: '❌ Проблема с ИИ ({msg}). Попробуй ещё!' },
   talk_ai_quiet: { it: 'Non ho sentito niente… riprova!', en: 'I did not hear anything… try again!', es: 'No he oído nada… ¡prueba otra vez!', ru: 'Я ничего не услышал… попробуй ещё!' },
   talk_who: { it: '{name}, un passante della città', en: '{name}, a passer-by in the city', es: '{name}, un paseante de la ciudad', ru: '{name}, прохожий в городе' },
