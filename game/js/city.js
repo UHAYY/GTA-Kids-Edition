@@ -1,6 +1,7 @@
 // Costruzione della città: griglia di strade, isolotti con edifici colorati,
 // parchi, alberi, lampioni e nuvole. Esporta anche la logica delle collisioni.
 import * as THREE from 'three';
+import { mergeGeometries } from '../vendor/three/addons/utils/BufferGeometryUtils.js';
 import { tn } from './i18n.js';
 
 export const CELL = 46;   // isolotto + strada
@@ -10,6 +11,7 @@ export const GRID = 8;    // isolotti per lato (città grande!)
 
 export const CITY_SIZE = GRID * CELL + ROAD; // c'è strada anche sul bordo
 const HALF = CITY_SIZE / 2;
+const HPI = Math.PI / 2;
 
 const BUILDING_COLORS = ['#f6b26b', '#a2c4c9', '#d5a6bd', '#b6d7a8', '#ffe599', '#9fc5e8', '#f4cccc', '#c9a7eb'];
 
@@ -32,9 +34,59 @@ function makeBuildingTexture (baseColor) {
   return tex;
 }
 
+// Moltiplica gli UV di una geometria: serve per "scrivere nelle coordinate"
+// quello che prima era texture.repeat, così geometrie con ripetizioni diverse
+// possono condividere lo stesso materiale e fondersi in una mesh unica.
+function scaleUV (geo, su, sv) {
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
+}
+
 export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   const colliders = []; // { minX, maxX, minZ, maxZ }
   const pois = [];      // punti dove nascono missioni e monete
+
+  // ---------- batch delle mesh statiche ----------
+  // La città è fatta di migliaia di piccole mesh ferme: ogni mesh è un draw
+  // call e la GPU dei notebook meno potenti soffoca. Ogni mesh statica finisce
+  // in coda (raggruppata per materiale) e alla fine le geometrie di ogni
+  // materiale si fondono in un'unica mesh: resa identica, draw call pochi.
+  const batches = new Map(); // materiale -> { geos: [], cast, receive }
+  function batch (mesh) {
+    mesh.updateWorldMatrix(true, false);
+    const geo = mesh.geometry.clone();
+    geo.applyMatrix4(mesh.matrixWorld);
+    let b = batches.get(mesh.material);
+    if (!b) {
+      b = { geos: [], cast: false, receive: false };
+      batches.set(mesh.material, b);
+    }
+    b.geos.push(geo);
+    if (mesh.castShadow) b.cast = true;
+    if (mesh.receiveShadow) b.receive = true;
+  }
+  // scorciatoia: crea la mesh, imposta posa/ombra e la mette in coda
+  const put = (geo, mat, x, y, z, opts = {}) => {
+    const m = new THREE.Mesh(geo, mat);
+    if (opts.rx) m.rotation.x = opts.rx;
+    if (opts.ry) m.rotation.y = opts.ry;
+    m.position.set(x, y, z);
+    m.castShadow = !!opts.cast;
+    m.receiveShadow = !!opts.receive;
+    batch(m);
+    return m;
+  };
+  function flushBatches () {
+    for (const [mat, b] of batches) {
+      const merged = mergeGeometries(b.geos);
+      if (!merged) continue;
+      const m = new THREE.Mesh(merged, mat);
+      m.castShadow = b.cast;
+      m.receiveShadow = b.receive;
+      scene.add(m);
+    }
+    batches.clear();
+  }
 
   // prato di base (con i buchi dove stanno gli ingressi dei garage
   // sotterranei: così dalla strada si vede la discesa)
@@ -61,7 +113,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     new THREE.ShapeGeometry(groundShape),
     new THREE.MeshLambertMaterial({ color: 0x8fce7a })
   );
-  ground.rotation.x = -Math.PI / 2;
+  ground.rotation.x = -HPI;
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -88,7 +140,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     new THREE.ShapeGeometry(ring),
     new THREE.MeshLambertMaterial({ color: 0xede2ae })
   );
-  sand.rotation.x = -Math.PI / 2;
+  sand.rotation.x = -HPI;
   sand.position.y = 0.015;
   sand.receiveShadow = true;
   scene.add(sand);
@@ -96,6 +148,8 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   // ombrelloni e asciugamani sulla spiaggia (tutti guardano il mare)
   const UMB_COLORS = ['#e53935', '#fdd835', '#ec407a', '#29b6f6', '#ff9800'];
   const poleMatB = new THREE.MeshLambertMaterial({ color: 0x8d6e63 });
+  // un materiale condiviso per colore (canopi e asciugamani)
+  const umbMats = UMB_COLORS.map(c => new THREE.MeshLambertMaterial({ color: c }));
   for (let u = 0; u < 18; u++) {
     // punto a caso sull'anello di sabbia, lontano dal bordo strada
     const side = Math.floor(Math.random() * 4);
@@ -109,7 +163,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     g.add(pole);
     const canopy = new THREE.Mesh(
       new THREE.ConeGeometry(1.7, 0.7, 10),
-      new THREE.MeshLambertMaterial({ color: UMB_COLORS[u % UMB_COLORS.length] })
+      umbMats[u % umbMats.length]
     );
     canopy.position.y = 2.3;
     canopy.castShadow = true;
@@ -117,13 +171,15 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     // asciugamano colorato accanto all'ombrellone
     const towel = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1.8),
-      new THREE.MeshLambertMaterial({ color: UMB_COLORS[(u + 2) % UMB_COLORS.length] })
+      umbMats[(u + 2) % umbMats.length]
     );
-    towel.rotation.x = -Math.PI / 2;
+    towel.rotation.x = -HPI;
     towel.position.set(1.9, 0.02, 0.3);
     g.add(towel);
     g.position.set(ux, 0, uz);
-    scene.add(g);
+    batch(pole);
+    batch(canopy);
+    batch(towel);
   }
 
   // il mare: quattro strisce attorno alla città (non la copre!), con una
@@ -159,7 +215,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   const addSea = (w, l, tex, x, z) => {
     const mat = new THREE.MeshLambertMaterial({ map: tex });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), mat);
-    m.rotation.x = -Math.PI / 2;
+    m.rotation.x = -HPI;
     m.position.set(x, 0.3, z);
     scene.add(m);
     seaMats.push(mat);
@@ -174,23 +230,18 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   for (let i = 0; i <= GRID; i++) roadCenters.push(-HALF + ROAD / 2 + i * CELL);
 
   for (const c of roadCenters) {
-    const mk = (w, l, mat, y, x, z) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), mat);
-      m.rotation.x = -Math.PI / 2;
-      m.position.set(x, y, z);
-      m.receiveShadow = true;
-      scene.add(m);
-    };
     // marciapiedi (leggermente più larghi, sotto le strade)
-    mk(ROAD + 4, CITY_SIZE, sidewalkMat, 0.005, c, 0);
-    mk(CITY_SIZE, ROAD + 4, sidewalkMat, 0.008, 0, c);
+    put(new THREE.PlaneGeometry(ROAD + 4, CITY_SIZE), sidewalkMat, c, 0.005, 0, { rx: -HPI, receive: true });
+    put(new THREE.PlaneGeometry(CITY_SIZE, ROAD + 4), sidewalkMat, 0, 0.008, c, { rx: -HPI, receive: true });
     // asfalto
-    mk(ROAD, CITY_SIZE, roadMat, 0.02, c, 0);
-    mk(CITY_SIZE, ROAD, roadMat, 0.025, 0, c);
+    put(new THREE.PlaneGeometry(ROAD, CITY_SIZE), roadMat, c, 0.02, 0, { rx: -HPI, receive: true });
+    put(new THREE.PlaneGeometry(CITY_SIZE, ROAD), roadMat, 0, 0.025, c, { rx: -HPI, receive: true });
   }
 
   // ---------- dettagli della strada ----------
-  // linee tratteggiate al centro (tra un incrocio e l'altro)
+  // linee tratteggiate al centro (tra un incrocio e l'altro). Prima ogni
+  // linea clonava la texture per cambiare il repeat: adesso la ripetizione
+  // sta negli UV e tutte le linee condividono due soli materiali.
   const mkTex = (w, h, draw) => {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
@@ -208,25 +259,19 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     g.fillStyle = 'rgba(255,255,255,.8)';
     g.fillRect(6, 5, 42, 6);
   });
+  const dashMatV = new THREE.MeshBasicMaterial({ map: dashV, transparent: true });
+  const dashMatH = new THREE.MeshBasicMaterial({ map: dashH, transparent: true });
   for (let k = 0; k < GRID; k++) {
     const a = roadCenters[k] + ROAD / 2 + 2;
     const b = roadCenters[k + 1] - ROAD / 2 - 2;
     const len = b - a;
     for (const c of roadCenters) {
-      const texV = dashV.clone(); texV.needsUpdate = true;
-      texV.repeat.set(1, len / 4);
-      const v = new THREE.Mesh(new THREE.PlaneGeometry(0.3, len),
-        new THREE.MeshBasicMaterial({ map: texV, transparent: true }));
-      v.rotation.x = -Math.PI / 2;
-      v.position.set(c, 0.033, (a + b) / 2);
-      scene.add(v);
-      const texH = dashH.clone(); texH.needsUpdate = true;
-      texH.repeat.set(len / 4, 1);
-      const h = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.3),
-        new THREE.MeshBasicMaterial({ map: texH, transparent: true }));
-      h.rotation.x = -Math.PI / 2;
-      h.position.set((a + b) / 2, 0.033, c);
-      scene.add(h);
+      const gv = new THREE.PlaneGeometry(0.3, len);
+      scaleUV(gv, 1, len / 4);
+      put(gv, dashMatV, c, 0.033, (a + b) / 2, { rx: -HPI });
+      const gh = new THREE.PlaneGeometry(len, 0.3);
+      scaleUV(gh, len / 4, 1);
+      put(gh, dashMatH, (a + b) / 2, 0.033, c, { rx: -HPI });
     }
   }
 
@@ -244,17 +289,10 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   for (const x of roadCenters) {
     for (const z of roadCenters) {
       const off = ROAD / 2 + 1.1;
-      const put = (dx, dz, w, l, material) => {
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), material);
-        m.rotation.x = -Math.PI / 2;
-        m.position.set(x + dx, 0.034, z + dz);
-        m.receiveShadow = true;
-        scene.add(m);
-      };
-      if (x > roadCenters[0]) put(-off, 0, 2.2, 10, zebraMatNS);
-      if (x < roadCenters[roadCenters.length - 1]) put(off, 0, 2.2, 10, zebraMatNS);
-      if (z > roadCenters[0]) put(0, -off, 10, 2.2, zebraMatEW);
-      if (z < roadCenters[roadCenters.length - 1]) put(0, off, 10, 2.2, zebraMatEW);
+      if (x > roadCenters[0]) put(new THREE.PlaneGeometry(2.2, 10), zebraMatNS, x - off, 0.034, z, { rx: -HPI, receive: true });
+      if (x < roadCenters[roadCenters.length - 1]) put(new THREE.PlaneGeometry(2.2, 10), zebraMatNS, x + off, 0.034, z, { rx: -HPI, receive: true });
+      if (z > roadCenters[0]) put(new THREE.PlaneGeometry(10, 2.2), zebraMatEW, x, 0.034, z - off, { rx: -HPI, receive: true });
+      if (z < roadCenters[roadCenters.length - 1]) put(new THREE.PlaneGeometry(10, 2.2), zebraMatEW, x, 0.034, z + off, { rx: -HPI, receive: true });
     }
   }
 
@@ -288,7 +326,8 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     leaves.castShadow = true;
     g.add(leaves);
     g.position.set(x, 0, z);
-    scene.add(g);
+    batch(trunk);
+    batch(leaves);
     colliders.push({ minX: x - 0.5, maxX: x + 0.5, minZ: z - 0.5, maxZ: z + 0.5 });
   }
 
@@ -299,6 +338,20 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   const stoneMat = new THREE.MeshLambertMaterial({ color: 0xb8b0a1 });
   const waterMat = new THREE.MeshLambertMaterial({ color: 0x64b5f6 });
   const FLOWER_COLORS = ['#e53935', '#fdd835', '#ec407a', '#ab47bc', '#ff9800', '#fafafa'];
+  // materiali condivisi anche per tende da sole e fiori (prima: uno a mesh)
+  const awningMats = BUILDING_COLORS.map(c => new THREE.MeshLambertMaterial({ color: c }));
+  const flowerMats = FLOWER_COLORS.map(c => new THREE.MeshLambertMaterial({ color: c }));
+
+  // Edifici: una texture per colore con due varianti di finestre, condivisa
+  // da tutti gli edifici dello stesso colore (prima ogni edificio aveva la
+  // sua texture e il suo materiale: un draw call ciascuno). Il numero di
+  // "piani" di finestre sta negli UV della geometria, non in texture.repeat.
+  const buildingMats = [];
+  for (let ci = 0; ci < BUILDING_COLORS.length; ci++) {
+    for (let v = 0; v < 2; v++) {
+      buildingMats.push(new THREE.MeshLambertMaterial({ map: makeBuildingTexture(BUILDING_COLORS[ci]) }));
+    }
+  }
 
   // insegne dei negozi: una texture per nome, disegnata su canvas e riusata
   // su tutti gli edifici (così restano poche texture in memoria)
@@ -371,7 +424,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     }
     g.position.set(x, 0, z);
     g.rotation.y = yaw;
-    scene.add(g);
+    for (const child of g.children) batch(child);
     colliders.push({ minX: x - hx, maxX: x + hx, minZ: z - hz, maxZ: z + hz });
     benches.push({ x, z, yaw });
   }
@@ -393,6 +446,10 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   // le panchine agli incroci si piazzano dopo gli edifici (qui sotto),
   // così nessun edificio può nascere dentro una panchina
 
+  // materiali condivisi dei parchi (prima: un materiale per parco)
+  const lawnMat = new THREE.MeshLambertMaterial({ color: 0x7ec850 });
+  const pathMat = new THREE.MeshLambertMaterial({ color: 0xd9cfa8 });
+
   for (let i = 0; i < GRID; i++) {
     for (let j = 0; j < GRID; j++) {
       const x0 = -HALF + ROAD + i * CELL;
@@ -403,65 +460,31 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
 
       if (parks.has(i * GRID + j)) {
         // parco: prato, un laghetto O una fontana, viale anulare, fiori, alberi
-        const lawn = new THREE.Mesh(
-          new THREE.PlaneGeometry(BLOCK - 4, BLOCK - 4),
-          new THREE.MeshLambertMaterial({ color: 0x7ec850 })
-        );
-        lawn.rotation.x = -Math.PI / 2;
-        lawn.position.set(x0 + BLOCK / 2, 0.03, z0 + BLOCK / 2);
-        lawn.receiveShadow = true;
-        scene.add(lawn);
+        put(new THREE.PlaneGeometry(BLOCK - 4, BLOCK - 4), lawnMat,
+          x0 + BLOCK / 2, 0.03, z0 + BLOCK / 2, { rx: -HPI, receive: true });
 
         const cx = x0 + BLOCK / 2;
         const cz = z0 + BLOCK / 2;
 
         // viale anulare di ghiaia chiara
-        const path = new THREE.Mesh(
-          new THREE.RingGeometry(6.2, 7.6, 28),
-          new THREE.MeshLambertMaterial({ color: 0xd9cfa8 })
-        );
-        path.rotation.x = -Math.PI / 2;
-        path.position.set(cx, 0.04, cz);
-        scene.add(path);
+        put(new THREE.RingGeometry(6.2, 7.6, 28), pathMat, cx, 0.04, cz, { rx: -HPI });
 
         if (Math.random() < 0.5) {
           // laghetto
-          const pond = new THREE.Mesh(
-            new THREE.CircleGeometry(5, 24),
-            new THREE.MeshLambertMaterial({ color: 0x64b5f6 })
-          );
-          pond.rotation.x = -Math.PI / 2;
-          pond.position.set(cx, 0.05, cz);
-          scene.add(pond);
+          put(new THREE.CircleGeometry(5, 24), waterMat, cx, 0.05, cz, { rx: -HPI });
         } else {
           // fontana: vasca di pietra, acqua e gettone centrale
-          const basin = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 3.1, 0.7, 20), stoneMat);
-          basin.position.set(cx, 0.35, cz);
-          basin.castShadow = true;
-          scene.add(basin);
-          const water = new THREE.Mesh(new THREE.CircleGeometry(2.5, 20), waterMat);
-          water.rotation.x = -Math.PI / 2;
-          water.position.set(cx, 0.72, cz);
-          scene.add(water);
-          const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 1.3, 12), stoneMat);
-          jet.position.set(cx, 1, cz);
-          jet.castShadow = true;
-          scene.add(jet);
-          const top = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), waterMat);
-          top.position.set(cx, 1.75, cz);
-          scene.add(top);
+          put(new THREE.CylinderGeometry(2.8, 3.1, 0.7, 20), stoneMat, cx, 0.35, cz, { cast: true });
+          put(new THREE.CircleGeometry(2.5, 20), waterMat, cx, 0.72, cz, { rx: -HPI });
+          put(new THREE.CylinderGeometry(0.35, 0.5, 1.3, 12), stoneMat, cx, 1, cz, { cast: true });
+          put(new THREE.SphereGeometry(0.5, 12, 10), waterMat, cx, 1.75, cz);
         }
 
         // fiori colorati lungo il viale
         for (let f = 0; f < 8; f++) {
           const a = f * (Math.PI * 2 / 8) + 0.3;
-          const flower = new THREE.Mesh(
-            new THREE.SphereGeometry(0.22, 8, 6),
-            new THREE.MeshLambertMaterial({ color: FLOWER_COLORS[(f + i + j) % FLOWER_COLORS.length] })
-          );
-          flower.position.set(cx + Math.cos(a) * 7, 0.3, cz + Math.sin(a) * 7);
-          flower.castShadow = true;
-          scene.add(flower);
+          put(new THREE.SphereGeometry(0.22, 8, 6), flowerMats[(f + i + j) % flowerMats.length],
+            cx + Math.cos(a) * 7, 0.3, cz + Math.sin(a) * 7, { cast: true });
         }
 
         for (let t = 0; t < 9; t++) {
@@ -485,71 +508,53 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
           const cz = z0 + b * (BLOCK / 2) + BLOCK / 4;
           mapBuildings.push({ x: cx, z: cz, w, d }); // per la minimappa
 
-          const tex = makeBuildingTexture(BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)]);
-          tex.repeat.set(Math.max(1, Math.round(w / 8)), Math.max(1, Math.round(h / 8)));
-          const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ map: tex }));
+          const ci = Math.floor(Math.random() * BUILDING_COLORS.length);
+          const geo = new THREE.BoxGeometry(w, h, d);
+          scaleUV(geo, Math.max(1, Math.round(w / 8)), Math.max(1, Math.round(h / 8)));
+          const mesh = new THREE.Mesh(geo, buildingMats[ci * 2 + Math.floor(Math.random() * 2)]);
           mesh.position.set(cx, h / 2, cz);
           mesh.castShadow = true;
           mesh.receiveShadow = true;
-          scene.add(mesh);
+          batch(mesh);
 
           // tetto piatto leggermente più scuro
-          const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.4, d + 0.3), roofMat);
-          roof.position.set(cx, h + 0.2, cz);
-          roof.castShadow = true;
-          scene.add(roof);
+          put(new THREE.BoxGeometry(w + 0.3, 0.4, d + 0.3), roofMat, cx, h + 0.2, cz, { cast: true });
 
           // porta d'ingresso su un lato a caso, con tenda da sole a colori
           const side = Math.floor(Math.random() * 4);
           const px = side === 0 ? cx - w / 2 : side === 1 ? cx + w / 2 : cx;
           const pz = side === 2 ? cz - d / 2 : side === 3 ? cz + d / 2 : cz;
           const horiz = side < 2; // la facciata guarda lungo x
-          const door = new THREE.Mesh(new THREE.BoxGeometry(horiz ? 0.12 : 1.6, 2.6, horiz ? 1.6 : 0.12), doorMat);
-          door.position.set(px + (horiz ? (side === 0 ? 0.07 : -0.07) : 0), 1.3, pz + (horiz ? 0 : (side === 2 ? 0.07 : -0.07)));
-          scene.add(door);
+          put(new THREE.BoxGeometry(horiz ? 0.12 : 1.6, 2.6, horiz ? 1.6 : 0.12), doorMat,
+            px + (horiz ? (side === 0 ? 0.07 : -0.07) : 0), 1.3,
+            pz + (horiz ? 0 : (side === 2 ? 0.07 : -0.07)));
           if (Math.random() < 0.5) {
-            const awning = new THREE.Mesh(
-              new THREE.BoxGeometry(horiz ? 0.9 : 2.6, 0.09, horiz ? 2.6 : 0.9),
-              new THREE.MeshLambertMaterial({ color: BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)] })
-            );
-            awning.position.set(px + (horiz ? (side === 0 ? 0.5 : -0.5) : 0), 2.9, pz + (horiz ? 0 : (side === 2 ? 0.5 : -0.5)));
-            awning.castShadow = true;
-            scene.add(awning);
+            put(new THREE.BoxGeometry(horiz ? 0.9 : 2.6, 0.09, horiz ? 2.6 : 0.9), awningMats[ci],
+              px + (horiz ? (side === 0 ? 0.5 : -0.5) : 0), 2.9,
+              pz + (horiz ? 0 : (side === 2 ? 0.5 : -0.5)), { cast: true });
           }
 
           // insegna del negozio sopra la porta (la maggior parte degli edifici
           // ne ha una; la texture è una per nome, già pronta in signMats)
           if (Math.random() < 0.7) {
-            const sign = new THREE.Mesh(
-              new THREE.PlaneGeometry(4.6, 1.15),
-              signMats[Math.floor(Math.random() * signMats.length)]
-            );
-            sign.position.set(
-              px + (horiz ? (side === 0 ? -0.1 : 0.1) : 0),
-              3.6,
-              pz + (horiz ? 0 : (side === 2 ? -0.1 : 0.1))
-            );
-            sign.rotation.y = side === 0 ? -Math.PI / 2 : side === 1 ? Math.PI / 2 : side === 2 ? Math.PI : 0;
-            scene.add(sign);
+            put(new THREE.PlaneGeometry(4.6, 1.15), signMats[Math.floor(Math.random() * signMats.length)],
+              px + (horiz ? (side === 0 ? -0.1 : 0.1) : 0), 3.6,
+              pz + (horiz ? 0 : (side === 2 ? -0.1 : 0.1)),
+              { ry: side === 0 ? -HPI : side === 1 ? HPI : side === 2 ? Math.PI : 0 });
           }
 
           // sui tetti: condizionatori e, ogni tanto, un serbatoio d'acqua
           if (Math.random() < 0.55) {
-            const ac = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.9), roofPropMat);
-            ac.position.set(cx + (Math.random() - 0.5) * (w - 3), h + 0.7, cz + (Math.random() - 0.5) * (d - 3));
-            ac.castShadow = true;
-            scene.add(ac);
+            put(new THREE.BoxGeometry(0.9, 0.6, 0.9), roofPropMat,
+              cx + (Math.random() - 0.5) * (w - 3), h + 0.7, cz + (Math.random() - 0.5) * (d - 3), { cast: true });
             if (Math.random() < 0.4) {
-              const ac2 = ac.clone();
-              ac2.position.set(cx + (Math.random() - 0.5) * (w - 3), h + 0.7, cz + (Math.random() - 0.5) * (d - 3));
-              scene.add(ac2);
+              put(new THREE.BoxGeometry(0.9, 0.6, 0.9), roofPropMat,
+                cx + (Math.random() - 0.5) * (w - 3), h + 0.7, cz + (Math.random() - 0.5) * (d - 3), { cast: true });
             }
           }
           if (Math.random() < 0.3) {
-            const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.5, 10), tankMat);
-            tank.position.set(cx + (Math.random() - 0.5) * (w - 4), h + 1.15, cz + (Math.random() - 0.5) * (d - 4));
-            tank.castShadow = true;
-            scene.add(tank);
+            put(new THREE.CylinderGeometry(0.7, 0.7, 1.5, 10), tankMat,
+              cx + (Math.random() - 0.5) * (w - 4), h + 1.15, cz + (Math.random() - 0.5) * (d - 4), { cast: true });
           }
 
           colliders.push({ minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - d / 2, maxZ: cz + d / 2 });
@@ -586,20 +591,15 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   for (const x of roadCenters) {
     for (const z of roadCenters) {
       for (const [sx, sz] of [[6.5, 6.5], [-6.5, -6.5]]) {
-        const g = new THREE.Group();
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 5, 6), poleMat);
-        pole.position.y = 2.5;
-        g.add(pole);
-        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 10), lampMat);
-        bulb.position.y = 5.2;
-        g.add(bulb);
-        g.position.set(x + sx, 0, z + sz);
-        scene.add(g);
+        put(new THREE.CylinderGeometry(0.12, 0.15, 5, 6), poleMat, x + sx, 2.5, z + sz);
+        put(new THREE.SphereGeometry(0.4, 10, 10), lampMat, x + sx, 5.2, z + sz);
       }
     }
   }
 
-  // semafori che ciclano da soli (verde → giallo → rosso) a due terzi degli incroci
+  // semafori che ciclano da soli (verde → giallo → rosso) a due terzi degli
+  // incroci. Le luci condividono tre materiali animati in updateCity: anche
+  // fuse in una mesh per colore, il ciclo funziona uguale.
   const tlRed = new THREE.MeshLambertMaterial({ color: 0x5a1a1a, emissive: 0x111111 });
   const tlYellow = new THREE.MeshLambertMaterial({ color: 0x5a4a1a, emissive: 0x111111 });
   const tlGreen = new THREE.MeshLambertMaterial({ color: 0x1a5a2a, emissive: 0x111111 });
@@ -620,8 +620,8 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
       g.add(lamp);
     });
     g.position.set(x, 0, z);
-    g.rotation.y = Math.PI / 4; // l'angolo è (+7.4, +7.4): guarda l'incrocio
-    scene.add(g);
+    g.rotation.y = HPI / 2; // l'angolo è (+7.4, +7.4): guarda l'incrocio
+    for (const child of g.children) batch(child);
   }
   for (const x of roadCenters) {
     for (const z of roadCenters) {
@@ -657,6 +657,9 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
       pois.push({ x: x + (Math.random() * 8 - 4), z: z + (Math.random() * 8 - 4) });
     }
   }
+
+  // qui tutte le mesh statiche sono in coda: una mesh fusa per materiale
+  flushBatches();
 
   // ---------- mappa statica per la minimappa ----------
   // una sola immagine grande con mare, spiaggia, prato, strade, parchi ed
@@ -698,17 +701,19 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     }
   }
 
-  // nuvole
+  // nuvole: i "fiocchi" di ogni nuvola sono fusi in una mesh sola (la nuvola
+  // si muove tutta insieme, quindi le sue parti restano insieme)
   const clouds = [];
   const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   for (let i = 0; i < 12; i++) {
-    const g = new THREE.Group();
     const puffs = 3 + Math.floor(Math.random() * 3);
+    const geos = [];
     for (let k = 0; k < puffs; k++) {
-      const s = new THREE.Mesh(new THREE.SphereGeometry(3 + Math.random() * 3, 10, 10), cloudMat);
-      s.position.set(k * 4 - 4, Math.random() * 2, Math.random() * 4 - 2);
-      g.add(s);
+      const s = new THREE.SphereGeometry(3 + Math.random() * 3, 10, 10);
+      s.translate(k * 4 - 4, Math.random() * 2, Math.random() * 4 - 2);
+      geos.push(s);
     }
+    const g = new THREE.Mesh(mergeGeometries(geos), cloudMat);
     g.position.set(
       (Math.random() - 0.5) * CITY_SIZE * 1.2,
       55 + Math.random() * 25,

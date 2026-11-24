@@ -540,6 +540,7 @@ async function init () {
   window.__game = { scene, camera, player, barber, dealer, workshop, smoke, assets, npcs, traffic, benches, missions, police, heists,
     // debug: forzare lo stato (es. test del conto dell'ospedale)
     __debug: { setUiState: s => { uiState = s; } } };
+  window.__game.renderer = renderer; // per diagnosticare le prestazioni
 
   // ---------- ciclo di gioco ----------
   initInput();
