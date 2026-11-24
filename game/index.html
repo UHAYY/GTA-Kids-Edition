@@ -47,6 +47,30 @@
   <!-- bolla del barbiere -->
   <div id="bubble" class="hidden" data-i18n="bubble_barber">✂️ Premi <b>E</b> per personalizzare l'avatar</div>
 
+  <!-- fumetto dell'NPC mentre parla -->
+  <div id="talk-bubble" class="hidden"></div>
+
+  <!-- dialogo con gli NPC (tasto T) -->
+  <div id="talk" class="hidden">
+    <div class="cpanel talk-panel">
+      <h2 id="talk-title">💬 Parla</h2>
+      <div id="talk-log"></div>
+      <div id="talk-status"></div>
+      <div id="talk-keyrow" class="hidden">
+        <p class="talk-keyhelp" data-i18n="talk_need_key">Serve una chiave API gratuita di OpenRouter.</p>
+        <div class="talk-keyrow-in">
+          <input id="talk-key" type="password" placeholder="sk-or-…" data-i18n-ph="talk_key_ph">
+          <button id="talk-keysave" data-i18n="talk_key_save">💾 Salva chiave</button>
+        </div>
+      </div>
+      <div class="talk-row">
+        <input id="talk-input" type="text" data-i18n-ph="talk_say" placeholder="…o scrivi qui e premi Invio:">
+        <button id="talk-send">➤</button>
+      </div>
+      <button id="talk-close" data-i18n="talk_close">✕ Chiudi (Esc)</button>
+    </div>
+  </div>
+
   <!-- negozio della concessionaria -->
   <div id="dealer" class="hidden">
     <div class="cpanel">

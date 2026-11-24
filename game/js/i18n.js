@@ -69,6 +69,34 @@ const STR = {
   bubble_barber: { it: "✂️ Premi <b>E</b> per personalizzare l'avatar", en: '✂️ Press <b>E</b> to customize your avatar', es: '✂️ Pulsa <b>E</b> para personalizar tu avatar', ru: '✂️ Нажми <b>E</b>, чтобы настроить персонажа' },
   kmh: { it: 'km/h', en: 'km/h', es: 'km/h', ru: 'км/ч' },
 
+  // --- parlare con gli NPC (tasto T) ---
+  prompt_talk: { it: 'Premi <b>T</b> per parlare', en: 'Press <b>T</b> to talk', es: 'Pulsa <b>T</b> para hablar', ru: 'Нажми <b>T</b>, чтобы поговорить' },
+  talk_title: { it: '💬 Parla con {name}', en: '💬 Talk to {name}', es: '💬 Habla con {name}', ru: '💬 Поговори с {name}' },
+  talk_listen: { it: '🎤 Ascolto… parla ora!', en: '🎤 Listening… speak now!', es: '🎤 Escuchando… ¡habla ahora!', ru: '🎤 Слушаю… говори сейчас!' },
+  talk_think: { it: '💭 {name} sta pensando…', en: '💭 {name} is thinking…', es: '💭 {name} está pensando…', ru: '💭 {name} думает…' },
+  talk_you: { it: 'Tu', en: 'You', es: 'Tú', ru: 'Ты' },
+  talk_say: { it: '…o scrivi qui e premi Invio:', en: '…or type here and press Enter:', es: '…o escribe aquí y pulsa Enter:', ru: '…или напиши здесь и нажми Enter:' },
+  talk_close: { it: '✕ Chiudi (Esc)', en: '✕ Close (Esc)', es: '✕ Cerrar (Esc)', ru: '✕ Закрыть (Esc)' },
+  talk_mic_error: {
+    it: '🎤 Il microfono non è disponibile qui: scrivi il messaggio qui sotto!',
+    en: '🎤 The microphone is not available here: type your message below!',
+    es: '🎤 El micrófono no está disponible aquí: ¡escribe tu mensaje abajo!',
+    ru: '🎤 Микрофон здесь недоступен: напиши сообщение ниже!'
+  },
+  talk_need_key: {
+    it: 'Per parlare con gli NPC serve una chiave API gratuita di <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (registrazione gratis, nessuna carta). Incollala qui sotto: resta salvata su questo PC.',
+    en: 'Talking to NPCs needs a free API key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (free sign-up, no card). Paste it below: it stays saved on this PC.',
+    es: 'Para hablar con los NPC hace falta una clave API gratis de <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (registro gratis, sin tarjeta). Pégala abajo: se queda guardada en este PC.',
+    ru: 'Чтобы говорить с NPC, нужен бесплатный API-ключ от <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (бесплатная регистрация, без карты). Вставь его ниже: он сохранится на этом ПК.'
+  },
+  talk_key_ph: { it: 'Incolla qui la chiave (sk-or-…)', en: 'Paste your key here (sk-or-…)', es: 'Pega aquí la clave (sk-or-…)', ru: 'Вставь ключ сюда (sk-or-…)' },
+  talk_key_save: { it: '💾 Salva chiave', en: '💾 Save key', es: '💾 Guardar clave', ru: '💾 Сохранить ключ' },
+  talk_key_ok: { it: '✅ Chiave salvata! Adesso parla!', en: '✅ Key saved! Now talk!', es: '✅ ¡Clave guardada! ¡Habla ahora!', ru: '✅ Ключ сохранён! Теперь говори!' },
+  talk_key_bad: { it: '❌ La chiave non sembra valida: controlla e riprova.', en: '❌ The key does not look valid: check it and try again.', es: '❌ La clave no parece válida: revísala y prueba otra vez.', ru: '❌ Ключ не похож на правильный: проверь и попробуй снова.' },
+  talk_ai_error: { it: '❌ Problema con l\'AI ({msg}). Riprova!', en: '❌ AI problem ({msg}). Try again!', es: '❌ Problema con la IA ({msg}). ¡Prueba otra vez!', ru: '❌ Проблема с ИИ ({msg}). Попробуй ещё!' },
+  talk_ai_quiet: { it: 'Non ho sentito niente… riprova!', en: 'I did not hear anything… try again!', es: 'No he oído nada… ¡prueba otra vez!', ru: 'Я ничего не услышал… попробуй ещё!' },
+  talk_who: { it: '{name}, un passante della città', en: '{name}, a passer-by in the city', es: '{name}, un paseante de la ciudad', ru: '{name}, прохожий в городе' },
+
   // --- messaggi vari (toast) ---
   coins_back: { it: '🪙 Sono ricomparse le monete!', en: '🪙 The coins are back!', es: '🪙 ¡Las monedas han vuelto!', ru: '🪙 Монетки появились снова!' },
   npc_bump: { it: '🤕 Ops! Si rialza tra poco!', en: '🤕 Oops! They get up in a moment!', es: '🤕 ¡Ups! Se levantará en un momento.', ru: '🤕 Ой! Сейчас встанет!' },
@@ -313,6 +341,9 @@ export function applyStatic () {
   document.title = t('title');
   for (const el of document.querySelectorAll('[data-i18n]')) {
     el.innerHTML = t(el.dataset.i18n);
+  }
+  for (const el of document.querySelectorAll('[data-i18n-ph]')) {
+    el.placeholder = t(el.dataset.i18nPh);
   }
 }
 

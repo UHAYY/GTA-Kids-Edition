@@ -28,6 +28,7 @@ import { createHospital } from './hospital.js';
 import { createWorkshop } from './workshop.js';
 import { createSmoke } from './smoke.js';
 import { createGarage, GARAGE_SITES, groundHoleFor } from './garage.js';
+import { createTalk } from './talk.js';
 import { t as tr, tn, locale, applyStatic, buildLangSwitch } from './i18n.js';
 
 // testi statici della pagina (menu, hud, pannelli) nella lingua salvata
@@ -180,6 +181,7 @@ async function init () {
   switchCar(0);
 
   const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
+  const talk = createTalk({ npcs, player, camera, promptEl: null });
   const traffic = createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 10);
   const missions = createMissions(scene, pois);
   const hud = createHUD();
@@ -489,6 +491,7 @@ async function init () {
   el('d-done').addEventListener('click', closeDealer);
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape' && uiState === 'dealer') closeDealer();
+    if (e.code === 'Escape' && uiState === 'talking') talk.close();
   });
 
   // ---------- bolla del barbiere ----------
@@ -670,14 +673,29 @@ async function init () {
         const sitting = player.rig.sitPhase;
         const nearBench = !sitting && benches.some(b =>
           Math.hypot(player.pos.x - b.x, player.pos.z - b.z) < 1.7);
+        // il passante più vicino: se c'è, il prompt è "premi T per parlare"
+        let nearNpc = null;
+        let npcDist = 3.2;
+        for (const n of npcs) {
+          if (n.rd) continue;
+          const d = Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
+          if (d < npcDist) { npcDist = d; nearNpc = n; }
+        }
         // prompt in base a cosa c'è vicino (sedersi e la concessionaria prima dell'auto)
         const txt = sitting ? tr('prompt_stand')
           : nearBench ? tr('prompt_sit')
           : nearDealer ? tr('prompt_buy')
+          : nearNpc ? tr('prompt_talk')
           : (nearCar && !nearBarber && !nearDealer) ? tr('prompt_enter_car')
           : '';
         if (txt !== lastPrompt) { hud.prompt.innerHTML = txt; lastPrompt = txt; }
         hud.prompt.classList.toggle('hidden', !txt);
+
+        // T: parla col passante più vicino (prima ancora di E, così non
+        // entri in macchina mentre vuoi chiacchierare)
+        if (nearNpc && consumePress('KeyT')) {
+          if (talk.tryTalk()) uiState = 'talking';
+        }
       }
 
       updateBarberBubble();
@@ -753,6 +771,29 @@ async function init () {
       player.rig.updateDecos();
       updateNPCs(npcs, dt, colliders);
       updateTraffic(traffic, dt, player.pos);
+    } else if (uiState === 'talking') {
+      // stai parlando con un passante: il mondo vive, tu sei fermo e la
+      // camera guarda l'NPC da dietro alle tue spalle
+      if (!talk.isOpen()) uiState = 'playing'; // chiuso col pulsante o Esc
+      updateNPCs(npcs, dt, colliders, carCircles, player.pos, playerCarCircles,
+        () => { sfx.bump(); hud.toast(tr('npc_bump')); });
+      updateTraffic(traffic, dt, player.pos);
+      updateCoins(dt, t, player.pos);
+      updateMissions(missions, dt, player.pos, hud, sfx);
+      hud.updateToast(dt);
+      updateBarberBubble();
+      talk.updateBubble();
+      const talkNpc = talk.isOpen()
+        ? npcs.find(n => Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z) < 4) : null;
+      if (talkNpc) {
+        const face = Math.atan2(player.pos.x - talkNpc.pos.x, player.pos.z - talkNpc.pos.z);
+        talkNpc.yaw = face; // l'NPC si guarda te
+        const mid = player.pos.clone().add(talkNpc.pos).multiplyScalar(0.5);
+        const camPos = mid.clone().add(new THREE.Vector3(
+          Math.sin(player.yaw) * -4.5, 2.8, Math.cos(player.yaw) * -4.5));
+        camera.position.lerp(camPos, 1 - Math.exp(-4 * dt));
+        camera.lookAt(talkNpc.pos.x, 1.6, talkNpc.pos.z);
+      }
     } else if (uiState === 'dead') {
       // MORTO / ARRESTATO: schermo a tinta unita, poi ti risvegli all'ospedale
       // con una vera fattura (ambulanza + ricovero) e l'auto davanti
