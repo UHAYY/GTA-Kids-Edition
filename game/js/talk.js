@@ -14,7 +14,10 @@ import { t as tr, locale, getLang } from './i18n.js';
 const KEY_STORE = 'kids-city-openrouter-key';
 const MODEL_STORE = 'kids-city-openrouter-model';
 // modello gratuito di default su OpenRouter (modificabile nel dialogo)
-const DEFAULT_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+// NB: deve essere un modello di CHAT (non "embed"!), e il catalogo dei
+// modelli :free cambia nel tempo — se smette di rispondere, guarda qui:
+// https://openrouter.ai/models?max_price=0
+const DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning:free';
 const TALK_DIST = 3.2;   // distanza massima per parlare a un passante
 
 // personaggi possibili per i passanti (il contesto dell'AI)
