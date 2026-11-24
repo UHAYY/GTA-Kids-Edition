@@ -187,11 +187,12 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
       },
       body: JSON.stringify({
         model: getModel(),
-        max_tokens: 600,
+        max_tokens: 1000,
         temperature: 0.8,
         // i modelli "reasoning" bruciano i token ragionando prima di
-        // rispondere: chiediamo di ragionare poco e di non mostrarlo
-        reasoning: { effort: 'low', exclude: true },
+        // rispondere (era la causa del "risposta vuota, finish=length"):
+        // lo disattivamo del tutto dove il modello lo permette
+        reasoning: { enabled: false, exclude: true },
         messages: [{ role: 'system', content: sys }, ...messages]
       })
     });

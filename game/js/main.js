@@ -37,7 +37,8 @@ applyStatic();
 // ---------- renderer, scena, camera ----------
 const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// 1.5 basta visivamente e sui portatili 4K dimezza il carico rispetto a 2
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -54,13 +55,16 @@ scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x9c8f6b, 1.05));
 const sun = new THREE.DirectionalLight(0xfff3d6, 1.8);
 sun.position.set(70, 110, 40);
 sun.castShadow = true;
-sun.shadow.mapSize.set(3072, 3072);
-sun.shadow.camera.left = -240;
-sun.shadow.camera.right = 240;
-sun.shadow.camera.top = 240;
-sun.shadow.camera.bottom = -240;
+// la mappa ombre segue il giocatore (vedi updateCamera): copre solo i
+// dintorni, cosi' copre piu' bene i dettagli e costa molto meno che
+// disegnare le ombre di tutta la citta' a ogni fotogramma
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -85;
+sun.shadow.camera.right = 85;
+sun.shadow.camera.top = 85;
+sun.shadow.camera.bottom = -85;
 sun.shadow.camera.near = 20;
-sun.shadow.camera.far = 600;
+sun.shadow.camera.far = 400;
 sun.shadow.bias = -0.0006;
 scene.add(sun);
 scene.add(sun.target);
@@ -300,6 +304,10 @@ async function init () {
   }
 
   function updateCamera (dt, pos, yaw, driving) {
+    // il sole segue il giocatore: la mappa ombre copre solo i dintorni
+    sun.target.position.set(pos.x, 0, pos.z);
+    sun.position.set(pos.x + 70, 110, pos.z + 40);
+
     // orbita col tasto destro: dopo 2 secondi fermi, torna dietro al
     // personaggio con un rientro morbido
     if (rmbDown) {
@@ -536,6 +544,8 @@ async function init () {
   // ---------- ciclo di gioco ----------
   initInput();
   const clock = new THREE.Clock();
+  let fpsN = 0;          // fotogrammi dall'ultimo tick
+  let fpsT0 = performance.now(); // inizio del tick (tempo reale, non il dt limitato)
 
   // cerchi di collisione delle auto (ogni auto = due cerchi lungo il corpo):
   // usati dal giocatore a piedi, dai personaggi e dall'auto del giocatore.
@@ -570,6 +580,19 @@ async function init () {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
+
+    // contatore FPS reale: ogni 10 secondi la media finisce nel log
+    // (console -> processo main -> game.log). Usa performance.now() e non
+    // il dt del gioco, che è limitato a 0.05 e con tanto lag "rallenta"
+    fpsN++;
+    const fpsNow = performance.now();
+    if (fpsNow - fpsT0 >= 10000) {
+      console.log('[fps]', Math.round(fpsN * 1000 / (fpsNow - fpsT0)),
+        '| risoluzione:', Math.round(window.innerWidth * renderer.getPixelRatio()) + 'x' +
+        Math.round(window.innerHeight * renderer.getPixelRatio()),
+        '| pixelRatio:', renderer.getPixelRatio());
+      fpsN = 0; fpsT0 = fpsNow;
+    }
 
     // nuvole alla deriva
     for (const c of clouds) {
