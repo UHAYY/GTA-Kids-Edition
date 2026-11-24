@@ -10,6 +10,19 @@ e ti cura, non ti spara!**
 > 🌍 Il gioco è disponibile in **italiano, inglese, spagnolo e russo**:
 > scegli la lingua con le bandierine nel menu principale.
 
+## 📥 Scarica e gioca (Windows)
+
+Non serve installare nulla di nulla — prendi l'ultima versione dalla pagina
+[**Releases**](https://github.com/UHAYY/GTA-Kids-Edition/releases/latest):
+
+- **`Auto.Avventure.-.Kids.City.<versione>.exe`** → *portable*: scarichi, doppio
+  clic, giochi. Nessuna installazione.
+- **`Auto.Avventure.-.Kids.City.Setup.<versione>.exe`** → *installer*:
+  installazione classica con scorciatoie nel menu Start e sul desktop.
+
+Le DLL del runtime Visual C++ di Microsoft sono incluse nel pacchetto, quindi
+il gioco funziona subito su qualsiasi PC Windows 10/11.
+
 ## 🎮 Cosa c'è nel gioco
 
 - **Una città 3D generata proceduralmente**: isolotti, negozi con insegne,
@@ -52,7 +65,7 @@ e ti cura, non ti spara!**
 | `Tasto destro` (tenuto) | ruota la camera |
 | `Esc` | chiudi i pannelli |
 
-## 🚀 Come si avvia
+## 🛠️ Avvio da sorgente (sviluppatori)
 
 Serve [Node.js](https://nodejs.org) installato. Poi:
 
@@ -74,11 +87,44 @@ Poi apri <http://localhost:8080/game/index.html>.
 
 </details>
 
+<details>
+<summary>Creare tu una release Windows</summary>
+
+```bash
+npm run dist
+```
+
+L'installer e la versione portable `.exe` finiscono nella cartella `dist/`.
+
+</details>
+
 ## 🌍 Cambiare lingua
 
 Nel menu principale clicca una bandierina: 🇮🇹 italiano · 🇬🇧 inglese ·
 🇪🇸 spagnolo · 🇷🇺 russo. La scelta viene salvata e vale anche per le insegne
 dei negozi nel mondo 3D.
+
+## 🩺 Risoluzione dei problemi
+
+Il gioco scrive un log dettagliato di ogni sessione — passaggi di caricamento,
+errori della console, crash con causa e codici di uscita, stato della GPU — in:
+
+```
+C:\Users\<tuo utente Windows>\AppData\Roaming\Auto Avventure - Kids City\logs\game.log
+```
+
+Suggerimento: premi `Win + R`, incolla `%APPDATA%\Auto Avventure - Kids City\logs`
+e dai Invio per aprire subito la cartella (`game.old.log` è la sessione
+precedente). Se il gioco fa i capricci, quel file dice esattamente perché.
+
+Il file di log si azzera automaticamente a 512 KB, quindi non cresce all'infinito.
+
+## 🏷️ Versioni e release
+
+Ogni release viene compilata in automatico da GitHub Actions quando viene
+spinto un tag tipo `v1.0.2`: la pipeline crea i file `.exe` per Windows e li
+allega alla GitHub Release (vedi
+[`.github/workflows/release.yml`](.github/workflows/release.yml)).
 
 ## 🛠️ Tecnologia
 
@@ -87,11 +133,12 @@ dei negozi nel mondo 3D.
 - Personaggi animati con rig FBX e clamp di animazioni (corsa, salto, sedersi…)
 - Effetti sonori generati con WebAudio, niente file esterni
 - Interfaccia tradotta in 4 lingue (`game/js/i18n.js`)
+- Log dettagliato su file (`main.js`) per diagnosticare problemi su qualsiasi PC
 
 ## 📁 Struttura
 
 ```
-main.js            → processo principale Electron (finestra del gioco)
+main.js            → processo principale Electron (finestra del gioco + log su file)
 dev-server.js      → mini web server per giocare dal browser in sviluppo
 game/
   index.html       → pagina del gioco (HUD, menu, pannelli)
@@ -118,7 +165,10 @@ game/
     assets.js      → caricamento di modelli e animazioni FBX
     input.js       → tastiera e pressi "una volta sola"
     audio.js       → effetti sonori WebAudio
+  vendor/          → moduli addon di three.js usati dal gioco (FBX, GLTF…)
 3d/                → modelli e animazioni FBX (personaggio e auto)
+dlls/              → DLL runtime Microsoft VC++ incluse nell'app
+.github/workflows/ → CI: release Windows automatiche a ogni tag
 ```
 
 ## 📜 Licenza

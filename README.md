@@ -10,6 +10,19 @@ care of you, they don't shoot you!**
 > 🌍 The game is available in **Italian, English, Spanish and Russian**:
 > pick your language with the flags in the main menu.
 
+## 📥 Download and play (Windows)
+
+No installation of anything required — grab the latest release from the
+[**Releases page**](https://github.com/UHAYY/GTA-Kids-Edition/releases/latest):
+
+- **`Auto.Avventure.-.Kids.City.<version>.exe`** → *portable*: download, double
+  click, play. Nothing is installed.
+- **`Auto.Avventure.-.Kids.City.Setup.<version>.exe`** → *installer*: classic
+  installation with Start-menu and desktop shortcuts.
+
+The Microsoft Visual C++ runtime DLLs are included in the package, so the
+game runs on any Windows 10/11 machine right away.
+
 ## 🎮 What's in the game
 
 - **A procedurally generated 3D city**: blocks, shops with signs, parks,
@@ -52,7 +65,7 @@ care of you, they don't shoot you!**
 | `Right mouse button` (held) | rotate the camera |
 | `Esc` | close panels |
 
-## 🚀 Getting started
+## 🛠️ Run from source (developers)
 
 You need [Node.js](https://nodejs.org) installed. Then:
 
@@ -74,11 +87,44 @@ Then open <http://localhost:8080/game/index.html>.
 
 </details>
 
+<details>
+<summary>Build a Windows release yourself</summary>
+
+```bash
+npm run dist
+```
+
+The installer and portable `.exe` files end up in the `dist/` folder.
+
+</details>
+
 ## 🌍 Changing language
 
 In the main menu, click a flag: 🇮🇹 Italian · 🇬🇧 English ·
 🇪🇸 Spanish · 🇷🇺 Russian. Your choice is saved and applies to the shop
 signs in the 3D world too.
+
+## 🩺 Troubleshooting
+
+The game writes a detailed log of every session — loading steps, console
+errors, crashes with their cause and exit codes, GPU status — to:
+
+```
+C:\Users\<your Windows user>\AppData\Roaming\Auto Avventure - Kids City\logs\game.log
+```
+
+Tip: press `Win + R`, paste `%APPDATA%\Auto Avventure - Kids City\logs` and
+press Enter to open the folder directly (`game.old.log` is the previous
+session). If the game misbehaves, that file says exactly why.
+
+The log file rotates automatically at 512 KB, so it never grows forever.
+
+## 🏷️ Versions and releases
+
+Every release is built automatically by GitHub Actions when a tag like
+`v1.0.2` is pushed: the pipeline compiles the Windows `.exe` files and
+attaches them to the GitHub Release (see
+[`.github/workflows/release.yml`](.github/workflows/release.yml)).
 
 ## 🛠️ Technology
 
@@ -88,11 +134,12 @@ signs in the 3D world too.
   jumping, sitting…)
 - Sound effects generated with WebAudio, no external files
 - UI translated into 4 languages (`game/js/i18n.js`)
+- Detailed file logging (`main.js`) for diagnosing problems on any machine
 
 ## 📁 Structure
 
 ```
-main.js            → Electron main process (game window)
+main.js            → Electron main process (game window + file logging)
 dev-server.js      → tiny web server to play in the browser while developing
 game/
   index.html       → game page (HUD, menu, panels)
@@ -119,7 +166,10 @@ game/
     assets.js      → FBX model and animation loading
     input.js       → keyboard and "press once" inputs
     audio.js       → WebAudio sound effects
+  vendor/          → three.js addon loaders used by the game (FBX, GLTF…)
 3d/                → FBX models and animations (character and cars)
+dlls/              → Microsoft VC++ runtime DLLs bundled with the app
+.github/workflows/ → CI: automatic Windows releases on every tag
 ```
 
 ## 📜 License
