@@ -9,7 +9,7 @@ export function createTraffic (scene, roadCenters, carPrefabs, playerPrefab, cou
   if (!others.length) others.push(playerPrefab);
 
   for (let i = 0; i < count; i++) {
-    const prefab = others[i % others.length];
+    const prefab = others[Math.floor(Math.random() * others.length)];
     const car = prefab.clone();
     scene.add(car);
 

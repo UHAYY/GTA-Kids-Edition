@@ -146,8 +146,7 @@ export function createPolice (scene, assets, world) {
     if (gun) gun.visible = false;
   }
 
-  function startRobbery (spot, player) {
-    stars = Math.min(MAX_STARS, stars + spot.stars);
+  function ensureGun (player) {
     if (!gun) {
       gun = makeGun(0xffd54f);
       const wrap = new THREE.Group();
@@ -157,8 +156,18 @@ export function createPolice (scene, assets, world) {
       if (player.rig.bones.handR) player.rig.bones.handR.add(wrap);
     }
     gun.visible = true;
-    hearts = HEARTS;
+  }
+
+  // nuova stella (furto d'auto, rapina, rapina con l'auto rubata…)
+  function addStars (n, player) {
+    ensureGun(player);
+    stars = Math.min(MAX_STARS, stars + n);
     spawnWave(player.mode === 'drive' ? player.carPos : player.pos);
+  }
+
+  function startRobbery (spot, player) {
+    addStars(spot.stars, player);
+    hearts = HEARTS;
   }
 
   function playerShoot (player) {
@@ -388,7 +397,7 @@ export function createPolice (scene, assets, world) {
   }
 
   return {
-    update, startRobbery, playerShoot, clearAll, clearCops, getState,
+    update, startRobbery, playerShoot, clearAll, clearCops, addStars, getState,
     get stars () { return stars; },
     get hearts () { return hearts; },
     get arrestTimer () { return arrestTimer; },

@@ -174,6 +174,7 @@ async function init () {
     const model = SHOP[i].prefab.clone();
     scene.add(model);
     scene.remove(player.car);
+    model.userData.topSpeed = SHOP[i].topSpeed; // serve anche alle auto rubate
     player.car = model;
     player.maxSpeed = SHOP[i].topSpeed;
     player.carDamage = 0; // un'auto appena comprata è integra, non eredita
@@ -183,6 +184,53 @@ async function init () {
   }
   // all'inizio guidi la Citycar del negozio (l'unica già tua)
   switchCar(0);
+
+  // ---------- auto parcheggiate e furti ----------
+  // le auto che lasci in giro restano qui: riprendile con E quando ci passi
+  // accanto. Le auto del traffico si possono rubare (con la polizia dietro)!
+  const parkedCars = [];
+
+  // velocità massima di un'auto del traffico: le basse e corte sono sportive,
+  // i van e gli SUV sono più lenti (misura in metri del modello)
+  function topSpeedOf (model) {
+    const [L, H] = model.userData?.size || [4, 1.5];
+    return Math.max(17, Math.min(28, Math.round(30 - H * 3.5 - L * 0.4)));
+  }
+
+  // prendi un'auto (rubata al traffico o parcheggiata): la tua auto di ora
+  // resta in scena dove sta, pronta per essere ripresa dopo
+  function takeCar (model, stolen) {
+    parkedCars.push(player.car);
+    model.userData.carDamage = model.userData.carDamage || 0;
+    attachCar(player, model, model.position.clone(), model.rotation.y);
+    player.maxSpeed = model.userData.topSpeed || topSpeedOf(model);
+    player.carDamage = model.userData.carDamage;
+    tryEnterExit(player, player.car); // metti in guida (nasconde il rig)
+    if (stolen) {
+      model.userData.stolen = true; // se ci farai una rapina, stelle extra!
+      police.addStars(1, player);
+      hud.toast(tr('car_stolen'));
+    }
+    sfx.door();
+    hud.speed.classList.remove('hidden');
+    hud.prompt.classList.add('hidden');
+  }
+
+  // ruba un'auto del traffico: esce dal traffico e al suo posto ne riparte
+  // un'altra, così la città resta viva
+  function stealTrafficCar (c) {
+    traffic.splice(traffic.indexOf(c), 1);
+    for (const nc of createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 1)) {
+      traffic.push(nc);
+    }
+    takeCar(c.car, true);
+  }
+
+  // torna in un'auto tua lasciata parcheggiata
+  function swapToParked (model) {
+    parkedCars.splice(parkedCars.indexOf(model), 1);
+    takeCar(model, false);
+  }
 
   const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
   const talk = createTalk({ npcs, player, camera, promptEl: null });
@@ -575,6 +623,10 @@ async function init () {
       addCarCircle(c.car.position.x, c.car.position.z, h,
         Math.sin(h) * c.speed, Math.cos(h) * c.speed, carCircles);
     }
+    // e anche le auto parcheggiate (lasciate in giro dal giocatore)
+    for (const pc of parkedCars) {
+      addCarCircle(pc.position.x, pc.position.z, pc.rotation.y, 0, 0, carCircles);
+    }
   }
 
   function animate () {
@@ -627,19 +679,36 @@ async function init () {
           openCustomizer();
         } else if (player.mode === 'walk' && player.pos.distanceTo(dealer.dealerPos) < 3.6) {
           openDealer();
-        } else if (player.mode === 'walk' && police.stars === 0 && !robbery &&
-                   heists.spots.some(s => Math.hypot(player.pos.x - s.x, player.pos.z - s.z) < 3.8)) {
+        } else if (!robbery && (police.stars === 0 ||
+                   (player.mode === 'drive' && player.car.userData.stolen)) &&
+                   heists.spots.some(s => {
+                     const px = player.mode === 'drive' ? player.carPos.x : player.pos.x;
+                     const pz = player.mode === 'drive' ? player.carPos.z : player.pos.z;
+                     return Math.hypot(px - s.x, pz - s.z) < 3.8;
+                   })) {
           // davanti a banca/gioielleria/supermarket: inizia la rapina
-          robbery = { spot: heists.spots.find(s => Math.hypot(player.pos.x - s.x, player.pos.z - s.z) < 3.8), t: 0 };
+          // (a piedi o anche restando in macchina)
+          const px = player.mode === 'drive' ? player.carPos.x : player.pos.x;
+          const pz = player.mode === 'drive' ? player.carPos.z : player.pos.z;
+          robbery = { spot: heists.spots.find(s => Math.hypot(px - s.x, pz - s.z) < 3.8), t: 0 };
           hud.toast(tr('alarm'));
           sfx.pickup();
         } else {
           // prima le panchine (siamo più vicini a una panchina che all'auto),
-          // poi salire/scendere dalla macchina
+          // poi l'auto del traffico da rubare, le auto parcheggiate e per
+          // ultime salire/scendere dalla macchina di adesso
           const sitRes = trySit(player, benches);
           if (sitRes === 'sitting') sfx.pickup();
           else if (sitRes === 'rising') sfx.pickup();
-          else {
+          else if (player.mode === 'walk' && traffic.some(c =>
+              Math.hypot(c.car.position.x - player.pos.x, c.car.position.z - player.pos.z) < 3.6)) {
+            stealTrafficCar(traffic.find(c =>
+              Math.hypot(c.car.position.x - player.pos.x, c.car.position.z - player.pos.z) < 3.6));
+          } else if (player.mode === 'walk' && parkedCars.some(c =>
+              Math.hypot(c.position.x - player.pos.x, c.position.z - player.pos.z) < 3.6)) {
+            swapToParked(parkedCars.find(c =>
+              Math.hypot(c.position.x - player.pos.x, c.position.z - player.pos.z) < 3.6));
+          } else {
             // usa sempre player.car: switchCar sostituisce il modello quando
             // compri un'auto, la vecchia variabile "car" non è più in scena
             const res = tryEnterExit(player, player.car);
@@ -697,6 +766,11 @@ async function init () {
         const sitting = player.rig.sitPhase;
         const nearBench = !sitting && benches.some(b =>
           Math.hypot(player.pos.x - b.x, player.pos.z - b.z) < 1.7);
+        // auto del traffico vicina (si ruba!) e auto parcheggiate (si riprende)
+        const nearTrafficCar = traffic.find(c =>
+          Math.hypot(c.car.position.x - player.pos.x, c.car.position.z - player.pos.z) < 3.6);
+        const nearParked = parkedCars.find(c =>
+          Math.hypot(c.position.x - player.pos.x, c.position.z - player.pos.z) < 3.6);
         // il passante più vicino: se c'è, il prompt è "premi T per parlare"
         let nearNpc = null;
         let npcDist = 3.2;
@@ -705,11 +779,14 @@ async function init () {
           const d = Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
           if (d < npcDist) { npcDist = d; nearNpc = n; }
         }
-        // prompt in base a cosa c'è vicino (sedersi e la concessionaria prima dell'auto)
+        // prompt in base a cosa c'è vicino (sedersi, la concessionaria, i
+        // furti e solo dopo l'auto di adesso)
         const txt = sitting ? tr('prompt_stand')
           : nearBench ? tr('prompt_sit')
           : nearDealer ? tr('prompt_buy')
           : nearNpc ? tr('prompt_talk')
+          : nearTrafficCar ? tr('prompt_steal')
+          : nearParked ? tr('prompt_swap_car')
           : (nearCar && !nearBarber && !nearDealer) ? tr('prompt_enter_car')
           : '';
         if (txt !== lastPrompt) { hud.prompt.innerHTML = txt; lastPrompt = txt; }
@@ -745,9 +822,13 @@ async function init () {
             missions.coins += s.reward;
             hud.coins.textContent = missions.coins.toLocaleString(locale());
             hud.setRobbery(null);
-            hud.toast(tr('robbery_win', { n: s.reward.toLocaleString(locale()) }));
             sfx.coin();
             police.startRobbery(s, player);
+            // rapina fatta con l'auto rubata: la polizia aggiunge un'altra stella
+            const inStolen = player.mode === 'drive' && player.car.userData.stolen;
+            hud.toast(tr(inStolen ? 'robbery_win_stolen' : 'robbery_win',
+              { n: s.reward.toLocaleString(locale()) }));
+            if (inStolen) police.addStars(1, player);
             robbery = null;
           }
         }

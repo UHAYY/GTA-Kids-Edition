@@ -62,6 +62,8 @@ const STR = {
     ru: '<b>W A S D</b> движение &nbsp;·&nbsp; <b>Shift</b> бег &nbsp;·&nbsp; <b>E</b> сесть / выйти из машины'
   },
   prompt_enter_car: { it: 'Premi <b>E</b> per salire in macchina', en: 'Press <b>E</b> to get in the car', es: 'Pulsa <b>E</b> para subir al coche', ru: 'Нажми <b>E</b>, чтобы сесть в машину' },
+  prompt_steal: { it: "🚨 Premi <b>E</b> per rubare l'auto!", en: '🚨 Press <b>E</b> to steal the car!', es: '🚨 ¡Pulsa <b>E</b> para robar el coche!', ru: '🚨 Нажми <b>E</b>, чтобы угнать машину!' },
+  prompt_swap_car: { it: '🔄 Premi <b>E</b> per prendere questa auto', en: '🔄 Press <b>E</b> to take this car', es: '🔄 Pulsa <b>E</b> para coger este coche', ru: '🔄 Нажми <b>E</b>, чтобы сесть в эту машину' },
   prompt_stand: { it: 'Premi <b>E</b> per alzarti', en: 'Press <b>E</b> to stand up', es: 'Pulsa <b>E</b> para levantarte', ru: 'Нажми <b>E</b>, чтобы встать' },
   prompt_sit: { it: 'Premi <b>E</b> per sederti', en: 'Press <b>E</b> to sit down', es: 'Pulsa <b>E</b> para sentarte', ru: 'Нажми <b>E</b>, чтобы сесть' },
   prompt_buy: { it: "Premi <b>E</b> per comprare un'auto", en: 'Press <b>E</b> to buy a car', es: 'Pulsa <b>E</b> para comprar un coche', ru: 'Нажми <b>E</b>, чтобы купить машину' },
@@ -108,6 +110,8 @@ const STR = {
   dmg_60: { it: "🚨 L'auto è ridotta male: va bene anche piano, ma corri quasi il doppio meno!", en: "🚨 The car is in bad shape: going slow is fine, but it runs almost half as fast!", es: '🚨 El coche está muy dañado: despacio va bien, ¡pero corre casi el doble de menos!', ru: '🚨 Машина сильно побита: можно ехать тихо, но она почти вдвое медленнее!' },
   robbery_abort: { it: "🏃 Rapina abbandonata! L'allarme è scattato lo stesso!", en: '🏃 Robbery abandoned! The alarm went off anyway!', es: '🏃 ¡Robo abandonado! ¡La alarma saltó igual!', ru: '🏃 Ограбление брошено! Тревога всё равно сработала!' },
   robbery_win: { it: '💰 Bottino: {n} monete! Corri a nasconderti!', en: '💰 Loot: {n} coins! Run and hide!', es: '💰 Botín: {n} monedas. ¡Corre a esconderte!', ru: '💰 Добыча: {n} монет! Беги прятаться!' },
+  robbery_win_stolen: { it: "💰 Bottino: {n} monete! E rapina con l'auto rubata: +1 ⭐ extra!", en: '💰 Loot: {n} coins! And a robbery in the stolen car: +1 extra ⭐!', es: '💰 Botín: {n} monedas. ¡Y robo con el coche robado: +1 ⭐ extra!', ru: '💰 Добыча: {n} монет! И ограбление на угнанной машине: +1 ⭐!' },
+  car_stolen: { it: '🚨 Auto rubata! La polizia ti ha visto: +1 ⭐!', en: '🚨 Car stolen! The police saw you: +1 ⭐!', es: '🚨 ¡Coche robado! La policía te ha visto: +1 ⭐!', ru: '🚨 Машина угнана! Полиция тебя заметила: +1 ⭐!' },
   hidden_ok: { it: '🅿️ Nascosto! Le stelle sono sparite!', en: '🅿️ Hidden! The stars are gone!', es: '🅿️ ¡Escondido! ¡Las estrellas han desaparecido!', ru: '🅿️ Спрятался! Звёзды пропали!' },
   big_dead: { it: 'MORTO', en: 'GAME OVER', es: 'MUERTO', ru: 'КОНЕЦ ИГРЫ' },
   big_busted: { it: 'ARRESTATO', en: 'BUSTED', es: 'ARRESTADO', ru: 'ПОЙМАН' },
