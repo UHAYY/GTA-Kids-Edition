@@ -26,6 +26,7 @@ import { createBarbershop } from './barber.js';
 import { createDealership } from './dealer.js';
 import { createHeists } from './heists.js';
 import { createPolice } from './police.js';
+import { createHelicopter } from './helicopter.js';
 import { createHospital } from './hospital.js';
 import { createWorkshop } from './workshop.js';
 import { createSmoke } from './smoke.js';
@@ -106,9 +107,12 @@ async function init () {
   // griglia a 8 isolotti per lato: barbiere (4,4), concessionaria (3,3),
   // banca (5,5), gioielleria (2,5), supermarket (6,2), ospedale (1,6),
   // e i 4 garage sotterranei (2,2), (5,3), (2,6), (6,4)
+  // più i 6 negozi rapinabili in più: banche (1,1) e (6,6), gioiellerie
+  // (6,3) e (1,4), supermarket (3,1) e (4,6)
   const SKIP = new Set([
     4 * GRID + 4, 3 * GRID + 3, 5 * GRID + 5, 2 * GRID + 5, 6 * GRID + 2, 1 * GRID + 6,
-    2 * GRID + 2, 5 * GRID + 3, 2 * GRID + 6, 6 * GRID + 4
+    2 * GRID + 2, 5 * GRID + 3, 2 * GRID + 6, 6 * GRID + 4,
+    1 * GRID + 1, 6 * GRID + 6, 6 * GRID + 3, 1 * GRID + 4, 3 * GRID + 1, 4 * GRID + 6
   ]);
   // sopra le rampe dei garage il prato è ritagliato: dall'esterno si vede
   // la discesa, come negli ingressi dei garage veri
@@ -383,6 +387,9 @@ async function init () {
   // ---------- rapine e polizia ----------
   const heists = createHeists(scene, colliders);
   const police = createPolice(scene, assets, { colliders, roadCenters });
+  // l'elicottero della polizia: da 4 stelle in su ti sorvola e ti segue.
+  // L'unico scampo: salire in montagna finché non ti perde di vista.
+  const heli = createHelicopter(scene);
   let robbery = null;   // { spot, t } mentre stai rapinando
   let deadTimer = 0;    // countdown dello schermo MORTO / ARRESTATO
   const HEARTS_MAX = 3;
@@ -833,15 +840,15 @@ async function init () {
           openCustomizer();
         } else if (player.mode === 'walk' && player.pos.distanceTo(dealer.dealerPos) < 3.6) {
           openDealer();
-        } else if (!robbery && (police.stars === 0 ||
-                   (player.mode === 'drive' && player.car.userData.stolen)) &&
-                   heists.spots.some(s => {
+        } else if (!robbery && heists.spots.some(s => {
                      const px = player.mode === 'drive' ? player.carPos.x : player.pos.x;
                      const pz = player.mode === 'drive' ? player.carPos.z : player.pos.z;
                      return Math.hypot(px - s.x, pz - s.z) < 3.8;
                    })) {
           // davanti a banca/gioielleria/supermarket: inizia la rapina
-          // (a piedi o anche restando in macchina)
+          // (a piedi o anche restando in macchina). Si può rapinare anche
+          // con le stelle addosso: ogni negozio aggiunge le sue stelle, così
+          // a forza di rapine si arriva all'elicottero!
           const px = player.mode === 'drive' ? player.carPos.x : player.pos.x;
           const pz = player.mode === 'drive' ? player.carPos.z : player.pos.z;
           robbery = { spot: heists.spots.find(s => Math.hypot(px - s.x, pz - s.z) < 3.8), t: 0 };
@@ -930,6 +937,9 @@ async function init () {
         updateCamera(dt, player.pos, player.yaw, false);
         const nearBarber = player.pos.distanceTo(barber.barberPos) < 3.4;
         const nearDealer = player.pos.distanceTo(dealer.dealerPos) < 3.6;
+        // davanti a banca/gioielleria/supermarket: si può rapinare (con E)
+        const nearSpot = heists.spots.some(s =>
+          Math.hypot(s.x - player.pos.x, s.z - player.pos.z) < 3.8);
         const nearCar = player.pos.distanceTo(player.car.position) < 3.6;
         const sitting = player.rig.sitPhase;
         const nearBench = !sitting && benches.some(b =>
@@ -957,6 +967,7 @@ async function init () {
         const txt = sitting ? tr('prompt_stand')
           : nearBench ? tr('prompt_sit')
           : nearDealer ? tr('prompt_buy')
+          : nearSpot ? tr('prompt_robbery')
           : nearNpc ? tr('prompt_talk')
           : nearTrafficCar ? tr('prompt_steal')
           : nearParked ? tr(nearParked.userData.bike ? 'prompt_swap_bike' : 'prompt_swap_car')
@@ -1037,6 +1048,13 @@ async function init () {
       };
       police.update(dt, policeCtx);
       hud.setStars(police.stars);
+      // elicottero: spawna a 4 stelle, ti insegue, e si arrende se fuggi
+      // in montagna (allora perdi 2 stelle: ti hanno visto scappare!)
+      const heliState = heli.update(dt, playerPos, police.stars, () => {
+        hud.toast(tr('heli_lost'));
+        police.loseStars(2);
+      });
+      if (heliState === 'spawned') hud.toast(tr('heli_here'));
       hud.setHearts(police.hearts);
     } else if (uiState === 'customizer') {
       // il mondo continua a vivere, la camera guarda l'avatar davanti

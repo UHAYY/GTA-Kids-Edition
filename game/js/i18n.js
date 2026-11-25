@@ -70,6 +70,19 @@ const STR = {
   prompt_stand: { it: 'Premi <b>E</b> per alzarti', en: 'Press <b>E</b> to stand up', es: 'Pulsa <b>E</b> para levantarte', ru: 'Нажми <b>E</b>, чтобы встать' },
   prompt_sit: { it: 'Premi <b>E</b> per sederti', en: 'Press <b>E</b> to sit down', es: 'Pulsa <b>E</b> para sentarte', ru: 'Нажми <b>E</b>, чтобы сесть' },
   prompt_buy: { it: "Premi <b>E</b> per comprare auto e bici", en: 'Press <b>E</b> to buy cars and bikes', es: 'Pulsa <b>E</b> para comprar coches y bicis', ru: 'Нажми <b>E</b>, чтобы купить машину или велосипед' },
+  prompt_robbery: { it: '🚨 Premi <b>E</b> per rapinare!', en: '🚨 Press <b>E</b> to rob it!', es: '🚨 ¡Pulsa <b>E</b> para robar!', ru: '🚨 Нажми <b>E</b>, чтобы ограбить!' },
+  heli_here: {
+    it: "🚁 L'elicottero della polizia ti ha visto: corri!",
+    en: '🚁 The police helicopter spotted you: run!',
+    es: '🚁 ¡El helicóptero de la policía te ha visto: corre!',
+    ru: '🚁 Полицейский вертолёт тебя заметил: беги!'
+  },
+  heli_lost: {
+    it: "🏔️ Sei scappato in montagna: l'elicottero ti ha perso! -2⭐",
+    en: '🏔️ You escaped to the mountains: the helicopter lost you! -2⭐',
+    es: '🏔️ ¡Escapaste a la montaña: el helicóptero te perdió! -2⭐',
+    ru: '🏔️ Ты скрылся в горах: вертолёт тебя потерял! -2⭐'
+  },
   prompt_repair: { it: "Premi <b>E</b> per riparare l'auto ({n} monete)", en: 'Press <b>E</b> to repair the car ({n} coins)', es: 'Pulsa <b>E</b> para reparar el coche ({n} monedas)', ru: 'Нажми <b>E</b>, чтобы починить машину ({n} монет)' },
   bubble_barber: { it: "✂️ Premi <b>E</b> per personalizzare l'avatar", en: '✂️ Press <b>E</b> to customize your avatar', es: '✂️ Pulsa <b>E</b> para personalizar tu avatar', ru: '✂️ Нажми <b>E</b>, чтобы настроить персонажа' },
   kmh: { it: 'km/h', en: 'km/h', es: 'km/h', ru: 'км/ч' },

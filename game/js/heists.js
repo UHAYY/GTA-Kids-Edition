@@ -89,9 +89,18 @@ export function createHeists (scene, colliders) {
 
   // banche, gioiellerie e supermarket: stelle e bottino crescono col rischio
   // (bottini realistici: la cassa di un super, i gioielli, la banca)
+  // I negozi stanno al centro dei loro isolotti (i blocchi sono a
+  // -161 + 46·i, vedi i SKIP di main.js che li riserva).
   addSpot('🏦', 'BANCA', 69, 69, { x: -1, z: 0 }, 3, 50000, 0xcfd8dc, 9);
   addSpot('💎', 'GIOIELLERIA', -69, 69, { x: 1, z: 0 }, 2, 15000, 0xe1bee7, 7);
   addSpot('🛒', 'SUPERMARKET', 115, -69, { x: -1, z: 0 }, 1, 2500, 0xffcc80, 6);
+  // seconda fila di negozi, sparsi per la città
+  addSpot('🏦', 'BANCA', -115, -115, { x: 1, z: 0 }, 3, 50000, 0xcfd8dc, 9);
+  addSpot('🏦', 'BANCA', 115, 115, { x: -1, z: 0 }, 3, 50000, 0xcfd8dc, 9);
+  addSpot('💎', 'GIOIELLERIA', 115, -23, { x: -1, z: 0 }, 2, 15000, 0xe1bee7, 7);
+  addSpot('💎', 'GIOIELLERIA', -115, 23, { x: 1, z: 0 }, 2, 15000, 0xe1bee7, 7);
+  addSpot('🛒', 'SUPERMARKET', -23, -115, { x: 0, z: 1 }, 1, 2500, 0xffcc80, 6);
+  addSpot('🛒', 'SUPERMARKET', 23, 115, { x: 0, z: -1 }, 1, 2500, 0xffcc80, 6);
 
   return { spots };
 }

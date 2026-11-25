@@ -165,6 +165,11 @@ export function createPolice (scene, assets, world) {
     spawnWave(player.mode === 'drive' ? player.carPos : player.pos);
   }
 
+  // stelle in meno (es. l'elicottero ti ha perso tra le montagne)
+  function loseStars (n) {
+    stars = Math.max(0, stars - n);
+  }
+
   function startRobbery (spot, player) {
     addStars(spot.stars, player);
     hearts = HEARTS;
@@ -398,7 +403,7 @@ export function createPolice (scene, assets, world) {
   }
 
   return {
-    update, startRobbery, playerShoot, clearAll, clearCops, addStars, getState,
+    update, startRobbery, playerShoot, clearAll, clearCops, addStars, loseStars, getState,
     get stars () { return stars; },
     get hearts () { return hearts; },
     get arrestTimer () { return arrestTimer; },
