@@ -220,8 +220,10 @@ export function createGarage (scene, colliders, gx, gz, carPrefabs) {
   }
 
   // cordoli attorno al buco aperto: dal prato non si cade dentro, l'unica
-  // via è l'ingresso (i collider di superficie non valgono sottoterra, quindi
-  // l'auto in discesa li attraversa senza fermarsi)
+  // via è l'ingresso. Sono ostacoli a livello del PRATO (maxY -0.5): l'auto
+  // che scende lungo la rampa li ha già sotto i piedi e li attraversa
+  // (il suo muso sporge 2,4 m: senza maxY il cordolo del fondo la blocca
+  // a metà rampa come un muro invisibile)
   const curbMat = mat('#9aa2a8');
   const backCurb = new THREE.Mesh(new THREE.BoxGeometry(8, 0.5, 0.4), curbMat);
   backCurb.position.set(gx, 0.25, gz + OPEN_BACK - 0.2);
@@ -232,9 +234,9 @@ export function createGarage (scene, colliders, gx, gz, carPrefabs) {
     c.position.set(gx + sx, 0.25, gz + (OPEN_BACK - 0.2 + RAMP_START + 0.4) / 2);
     scene.add(c);
   }
-  colliders.push({ minX: gx - 4, maxX: gx + 4, minZ: gz + OPEN_BACK - 0.4, maxZ: gz + OPEN_BACK });
-  colliders.push({ minX: gx - 4, maxX: gx - 3.6, minZ: gz + OPEN_BACK - 0.4, maxZ: gz + RAMP_START + 0.5 });
-  colliders.push({ minX: gx + 3.6, maxX: gx + 4, minZ: gz + OPEN_BACK - 0.4, maxZ: gz + RAMP_START + 0.5 });
+  colliders.push({ minX: gx - 4, maxX: gx + 4, minZ: gz + OPEN_BACK - 0.4, maxZ: gz + OPEN_BACK, maxY: -0.5 });
+  colliders.push({ minX: gx - 4, maxX: gx - 3.6, minZ: gz + OPEN_BACK - 0.4, maxZ: gz + RAMP_START + 0.5, maxY: -0.5 });
+  colliders.push({ minX: gx + 3.6, maxX: gx + 4, minZ: gz + OPEN_BACK - 0.4, maxZ: gz + RAMP_START + 0.5, maxY: -0.5 });
 
   // pilastri in mezzo alla sala (lascia libere le file dei posti laterali)
   for (const px of [-3.8, 3.8]) {

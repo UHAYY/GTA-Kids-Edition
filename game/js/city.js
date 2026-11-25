@@ -741,15 +741,20 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
 // Spinge un cerchio (pos, radius) fuori da tutti gli ostacoli.
 // Ritorna la normale dell'ultimo urto, o null se non c'è stata collisione.
 // Ostacoli a quote diverse: quelli con minY valgono solo sottoterra (i muri
-// del garage), quelli di superficie solo sopra il livello della strada.
+// del garage), quelli con maxY solo al livello della strada o sopra (cordoli
+// sul prato: chi scende in garage gli passa sotto), quelli di superficie
+// solo sopra il livello della strada.
 export function resolveCollisions (pos, radius, colliders) {
   const y = pos.y || 0;
   let normal = null;
   for (const c of colliders) {
     if (c.minY !== undefined) {
       if (y > c.minY) continue; // sei più in alto del muro interrato
-    } else if (y < -2) {
-      continue; // sei sotto il livello della strada: ignora gli edifici
+    } else {
+      // ostacolo a pelo della strada (cordoli sul prato): chi sta scendendo
+      // sottoterra gli passa sotto
+      if (c.maxY !== undefined && y < c.maxY) continue;
+      if (y < -2) continue; // sei sotto il livello della strada: ignora gli edifici
     }
     const cx = Math.max(c.minX, Math.min(pos.x, c.maxX));
     const cz = Math.max(c.minZ, Math.min(pos.z, c.maxZ));
