@@ -29,6 +29,7 @@ import { createHospital } from './hospital.js';
 import { createWorkshop } from './workshop.js';
 import { createSmoke } from './smoke.js';
 import { createGarage, GARAGE_SITES, groundHoleFor } from './garage.js';
+import { createBike, BIKE_KINDS } from './bikes.js';
 import { createTalk } from './talk.js';
 import { t as tr, tn, locale, applyStatic, buildLangSwitch } from './i18n.js';
 
@@ -161,6 +162,10 @@ async function init () {
     { prefab: pick(4.4, 1.38), nome: 'Coupé',         price: 58000, topSpeed: 32 },
     { prefab: pick(4.6, 1.42), nome: 'Cabriolet',     price: 65000, topSpeed: 34 }
   ];
+  // in dote anche le bici: costano poco, vanno piano ma non si rovinano mai
+  for (const k of BIKE_KINDS) {
+    SHOP.push({ prefab: createBike(k.color, k.kind), nome: k.nome, price: k.price, topSpeed: k.topSpeed });
+  }
   const garage = { owned: SHOP.map((s, i) => i === 0), current: 0 };
   const dealer = createDealership(scene, assets.createEric, colliders, SHOP);
   // l'officina accanto: qui si ripara l'auto rovinata dagli scontri
@@ -172,26 +177,40 @@ async function init () {
   // fumo nero dal cofano delle auto molto rovinate
   const smoke = createSmoke(scene);
 
-  // cambia (o compra) un'auto: il modello si sostituisce dove sei
+  // ---------- auto e bici parcheggiate ----------
+  // i veicoli che lasci in giro restano qui: riprendili con E quando ci
+  // passi accanto. Anche le auto e le bici rubate finiscono in questa lista
+  // quando ne cambi di nuovo.
+  const parkedCars = [];
+
+  // cambia (o compra) un veicolo: il modello si sostituisce dove sei
   function switchCar (i) {
     const model = SHOP[i].prefab.clone();
+    model.userData.shopIndex = i; // per riconoscere i veicoli del negozio
     scene.add(model);
-    scene.remove(player.car);
+    // il veicolo di prima: se era del negozio si ritira (il negozio se
+    // ricrea il modello), se era rubata/parcheggiata resta in giro dov'è,
+    // pronto per essere ripreso con E
+    if (player.car) {
+      if (player.car.userData.shopIndex !== undefined) scene.remove(player.car);
+      else parkedCars.push(player.car);
+    }
     model.userData.topSpeed = SHOP[i].topSpeed; // serve anche alle auto rubate
     player.car = model;
     player.maxSpeed = SHOP[i].topSpeed;
     player.carDamage = 0; // un'auto appena comprata è integra, non eredita
                           // i danni della vecchia
     garage.current = i;
+    // compri a piedi? il veicolo nuovo arriva proprio davanti a te
+    if (player.mode === 'walk') {
+      player.carPos.copy(player.pos).add(new THREE.Vector3(
+        Math.sin(player.yaw + Math.PI) * 2.5, 0, Math.cos(player.yaw + Math.PI) * 2.5));
+      player.carPos.y = 0;
+    }
     syncCarVisual(player, 0);
   }
   // all'inizio guidi la Citycar del negozio (l'unica già tua)
   switchCar(0);
-
-  // ---------- auto parcheggiate e furti ----------
-  // le auto che lasci in giro restano qui: riprendile con E quando ci passi
-  // accanto. Le auto del traffico si possono rubare (con la polizia dietro)!
-  const parkedCars = [];
 
   // velocità massima di un'auto del traffico: le basse e corte sono sportive,
   // i van e gli SUV sono più lenti (misura in metri del modello)
@@ -212,7 +231,7 @@ async function init () {
     if (stolen) {
       model.userData.stolen = true; // se ci farai una rapina, stelle extra!
       police.addStars(1, player);
-      hud.toast(tr('car_stolen'));
+      hud.toast(tr(model.userData.bike ? 'bike_stolen' : 'car_stolen'));
     }
     sfx.door();
     hud.speed.classList.remove('hidden');
@@ -237,6 +256,41 @@ async function init () {
   function swapToParked (model) {
     parkedCars.splice(parkedCars.indexOf(model), 1);
     takeCar(model, false);
+  }
+
+  // prendi una delle bici lasciate in giro (per il proprietario è un furto!)
+  function takeFreeBike (model) {
+    freeBikes.splice(freeBikes.indexOf(model), 1);
+    takeCar(model, true);
+  }
+
+  // ---------- bici parcheggiate per la città ----------
+  // sugli angoli dei marciapiedi, come le bici di quartiere lasciate lì:
+  // ne nascono 8, mescolando i tre modelli. Si prendono con E (furto!).
+  const freeBikes = [];
+  {
+    const spots = [];
+    for (let s = 0; s < 200 && spots.length < 8; s++) {
+      const x = roadCenters[Math.floor(Math.random() * roadCenters.length)] +
+        (Math.random() < 0.5 ? -9 : 9);
+      const z = roadCenters[Math.floor(Math.random() * roadCenters.length)] +
+        (Math.random() < 0.5 ? -9 : 9);
+      // niente bici dentro alberi, edifici o panchine
+      if (colliders.some(c =>
+        x > c.minX - 1 && x < c.maxX + 1 && z > c.minZ - 1 && z < c.maxZ + 1)) continue;
+      // e nemmeno tutte ammassate sullo stesso incrocio
+      if (spots.some(p => Math.hypot(p.x - x, p.z - z) < 40)) continue;
+      spots.push({ x, z });
+    }
+    for (const p of spots) {
+      const k = BIKE_KINDS[Math.floor(Math.random() * BIKE_KINDS.length)];
+      const bike = createBike(k.color, k.kind);
+      bike.position.set(p.x, 0, p.z);
+      bike.rotation.y = Math.random() * Math.PI * 2;
+      bike.userData.topSpeed = k.topSpeed;
+      scene.add(bike);
+      freeBikes.push(bike);
+    }
   }
 
   const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
@@ -619,25 +673,33 @@ async function init () {
       arr.push({ x: x + Math.sin(heading) * off, z: z + Math.cos(heading) * off, r: 1.0, vx, vz, y });
     }
   }
+  // i veicoli in scena: le bici sono strette (un cerchietto solo)
+  function addVehicleCircles (model, x, z, heading, vx, vz, arr, y = 0) {
+    if (model.userData && model.userData.bike) {
+      arr.push({ x, z, r: 0.6, vx, vz, y });
+      return;
+    }
+    addCarCircle(x, z, heading, vx, vz, arr, y);
+  }
   function updateCarCircles (excludePlayerCar) {
     carCircles.length = 0;
     playerCarCircles.length = 0;
     if (excludePlayerCar) {
-      // in guida: l'auto del giocatore va nei suoi cerchi (per i pedoni)
+      // in guida: il veicolo del giocatore va nei suoi cerchi (per i pedoni)
       const vx = Math.sin(player.heading) * player.speed;
       const vz = Math.cos(player.heading) * player.speed;
-      addCarCircle(player.carPos.x, player.carPos.z, player.heading, vx, vz, playerCarCircles, player.carPos.y || 0);
+      addVehicleCircles(player.car, player.carPos.x, player.carPos.z, player.heading, vx, vz, playerCarCircles, player.carPos.y || 0);
     } else {
-      addCarCircle(player.carPos.x, player.carPos.z, player.heading, 0, 0, carCircles, player.carPos.y || 0);
+      addVehicleCircles(player.car, player.carPos.x, player.carPos.z, player.heading, 0, 0, carCircles, player.carPos.y || 0);
     }
     for (const c of traffic) {
       const h = c.car.rotation.y;
       addCarCircle(c.car.position.x, c.car.position.z, h,
         Math.sin(h) * c.speed, Math.cos(h) * c.speed, carCircles);
     }
-    // e anche le auto parcheggiate (lasciate in giro dal giocatore)
+    // e anche i veicoli parcheggiati (lasciati in giro dal giocatore)
     for (const pc of parkedCars) {
-      addCarCircle(pc.position.x, pc.position.z, pc.rotation.y, 0, 0, carCircles);
+      addVehicleCircles(pc, pc.position.x, pc.position.z, pc.rotation.y, 0, 0, carCircles);
     }
   }
 
@@ -720,6 +782,10 @@ async function init () {
               Math.hypot(c.position.x - player.pos.x, c.position.z - player.pos.z) < 3.6)) {
             swapToParked(parkedCars.find(c =>
               Math.hypot(c.position.x - player.pos.x, c.position.z - player.pos.z) < 3.6));
+          } else if (player.mode === 'walk' && freeBikes.some(b =>
+              Math.hypot(b.position.x - player.pos.x, b.position.z - player.pos.z) < 2.6)) {
+            takeFreeBike(freeBikes.find(b =>
+              Math.hypot(b.position.x - player.pos.x, b.position.z - player.pos.z) < 2.6));
           } else {
             // usa sempre player.car: switchCar sostituisce il modello quando
             // compri un'auto, la vecchia variabile "car" non è più in scena
@@ -746,8 +812,9 @@ async function init () {
         }
         syncCarVisual(player, dt);
         // fumo nero dal cofano quando l'auto è molto rovinata (più danno
-        // = più sbuffi al secondo), anche da ferma
-        if ((player.carDamage || 0) > 0.45 &&
+        // = più sbuffi al secondo), anche da ferma. Le bici non fumano!
+        if (!(player.car.userData && player.car.userData.bike) &&
+            (player.carDamage || 0) > 0.45 &&
             Math.random() < dt * 14 * player.carDamage) {
           const [L, H] = player.car.userData?.size || [4, 1.5];
           const hood = player.carPos.clone().add(new THREE.Vector3(
@@ -783,6 +850,9 @@ async function init () {
           Math.hypot(c.car.position.x - player.pos.x, c.car.position.z - player.pos.z) < 3.6);
         const nearParked = parkedCars.find(c =>
           Math.hypot(c.position.x - player.pos.x, c.position.z - player.pos.z) < 3.6);
+        // una bici lasciata in giro (si prende con E!)
+        const nearFreeBike = freeBikes.find(b =>
+          Math.hypot(b.position.x - player.pos.x, b.position.z - player.pos.z) < 2.6);
         // il passante più vicino: se c'è, il prompt è "premi T per parlare"
         let nearNpc = null;
         let npcDist = 3.2;
@@ -793,13 +863,15 @@ async function init () {
         }
         // prompt in base a cosa c'è vicino (sedersi, la concessionaria, i
         // furti e solo dopo l'auto di adesso)
+        const ownBike = !!player.car.userData.bike; // anche la tua è una bici?
         const txt = sitting ? tr('prompt_stand')
           : nearBench ? tr('prompt_sit')
           : nearDealer ? tr('prompt_buy')
           : nearNpc ? tr('prompt_talk')
           : nearTrafficCar ? tr('prompt_steal')
-          : nearParked ? tr('prompt_swap_car')
-          : (nearCar && !nearBarber && !nearDealer) ? tr('prompt_enter_car')
+          : nearParked ? tr(nearParked.userData.bike ? 'prompt_swap_bike' : 'prompt_swap_car')
+          : nearFreeBike ? tr('prompt_take_bike')
+          : (nearCar && !nearBarber && !nearDealer) ? tr(ownBike ? 'prompt_enter_bike' : 'prompt_enter_car')
           : '';
         if (txt !== lastPrompt) { hud.prompt.innerHTML = txt; lastPrompt = txt; }
         hud.prompt.classList.toggle('hidden', !txt);
@@ -965,6 +1037,7 @@ async function init () {
     if (uiState !== 'menu' && uiState !== 'loading') {
       minimap.update({
         player, car, missions, barber, dealer, traffic, coins,
+        bikes: freeBikes, // bici da prendere in giro
         heists: heists.spots.concat([
           { x: hospital.spawn.x, z: hospital.spawn.z, icon: '🏥' },
           { x: workshop.pos.x, z: workshop.pos.z, icon: '🔧' }

@@ -62,11 +62,14 @@ const STR = {
     ru: '<b>W A S D</b> движение &nbsp;·&nbsp; <b>Shift</b> бег &nbsp;·&nbsp; <b>E</b> сесть / выйти из машины'
   },
   prompt_enter_car: { it: 'Premi <b>E</b> per salire in macchina', en: 'Press <b>E</b> to get in the car', es: 'Pulsa <b>E</b> para subir al coche', ru: 'Нажми <b>E</b>, чтобы сесть в машину' },
+  prompt_enter_bike: { it: 'Premi <b>E</b> per salire in bici', en: 'Press <b>E</b> to get on the bike', es: 'Pulsa <b>E</b> para subir a la bici', ru: 'Нажми <b>E</b>, чтобы сесть на велосипед' },
+  prompt_take_bike: { it: '🚨 Premi <b>E</b> per prendere la bici!', en: '🚨 Press <b>E</b> to take the bike!', es: '🚨 ¡Pulsa <b>E</b> para coger la bici!', ru: '🚨 Нажми <b>E</b>, чтобы взять велосипед!' },
   prompt_steal: { it: "🚨 Premi <b>E</b> per rubare l'auto!", en: '🚨 Press <b>E</b> to steal the car!', es: '🚨 ¡Pulsa <b>E</b> para robar el coche!', ru: '🚨 Нажми <b>E</b>, чтобы угнать машину!' },
   prompt_swap_car: { it: '🔄 Premi <b>E</b> per prendere questa auto', en: '🔄 Press <b>E</b> to take this car', es: '🔄 Pulsa <b>E</b> para coger este coche', ru: '🔄 Нажми <b>E</b>, чтобы сесть в эту машину' },
+  prompt_swap_bike: { it: '🔄 Premi <b>E</b> per riprendere questa bici', en: '🔄 Press <b>E</b> to take this bike back', es: '🔄 Pulsa <b>E</b> para coger esta bici', ru: '🔄 Нажми <b>E</b>, чтобы снова сесть на этот велосипед' },
   prompt_stand: { it: 'Premi <b>E</b> per alzarti', en: 'Press <b>E</b> to stand up', es: 'Pulsa <b>E</b> para levantarte', ru: 'Нажми <b>E</b>, чтобы встать' },
   prompt_sit: { it: 'Premi <b>E</b> per sederti', en: 'Press <b>E</b> to sit down', es: 'Pulsa <b>E</b> para sentarte', ru: 'Нажми <b>E</b>, чтобы сесть' },
-  prompt_buy: { it: "Premi <b>E</b> per comprare un'auto", en: 'Press <b>E</b> to buy a car', es: 'Pulsa <b>E</b> para comprar un coche', ru: 'Нажми <b>E</b>, чтобы купить машину' },
+  prompt_buy: { it: "Premi <b>E</b> per comprare auto e bici", en: 'Press <b>E</b> to buy cars and bikes', es: 'Pulsa <b>E</b> para comprar coches y bicis', ru: 'Нажми <b>E</b>, чтобы купить машину или велосипед' },
   prompt_repair: { it: "Premi <b>E</b> per riparare l'auto ({n} monete)", en: 'Press <b>E</b> to repair the car ({n} coins)', es: 'Pulsa <b>E</b> para reparar el coche ({n} monedas)', ru: 'Нажми <b>E</b>, чтобы починить машину ({n} монет)' },
   bubble_barber: { it: "✂️ Premi <b>E</b> per personalizzare l'avatar", en: '✂️ Press <b>E</b> to customize your avatar', es: '✂️ Pulsa <b>E</b> para personalizar tu avatar', ru: '✂️ Нажми <b>E</b>, чтобы настроить персонажа' },
   kmh: { it: 'km/h', en: 'km/h', es: 'km/h', ru: 'км/ч' },
@@ -112,6 +115,7 @@ const STR = {
   robbery_win: { it: '💰 Bottino: {n} monete! Corri a nasconderti!', en: '💰 Loot: {n} coins! Run and hide!', es: '💰 Botín: {n} monedas. ¡Corre a esconderte!', ru: '💰 Добыча: {n} монет! Беги прятаться!' },
   robbery_win_stolen: { it: "💰 Bottino: {n} monete! E rapina con l'auto rubata: +1 ⭐ extra!", en: '💰 Loot: {n} coins! And a robbery in the stolen car: +1 extra ⭐!', es: '💰 Botín: {n} monedas. ¡Y robo con el coche robado: +1 ⭐ extra!', ru: '💰 Добыча: {n} монет! И ограбление на угнанной машине: +1 ⭐!' },
   car_stolen: { it: '🚨 Auto rubata! La polizia ti ha visto: +1 ⭐!', en: '🚨 Car stolen! The police saw you: +1 ⭐!', es: '🚨 ¡Coche robado! La policía te ha visto: +1 ⭐!', ru: '🚨 Машина угнана! Полиция тебя заметила: +1 ⭐!' },
+  bike_stolen: { it: '🚨 Bici rubata! La polizia ti ha visto: +1 ⭐!', en: '🚨 Bike stolen! The police saw you: +1 ⭐!', es: '🚨 ¡Bici robada! La policía te ha visto: +1 ⭐!', ru: '🚨 Велосипед украден! Полиция тебя заметила: +1 ⭐!' },
   hidden_ok: { it: '🅿️ Nascosto! Le stelle sono sparite!', en: '🅿️ Hidden! The stars are gone!', es: '🅿️ ¡Escondido! ¡Las estrellas han desaparecido!', ru: '🅿️ Спрятался! Звёзды пропали!' },
   big_dead: { it: 'MORTO', en: 'GAME OVER', es: 'MUERTO', ru: 'КОНЕЦ ИГРЫ' },
   big_busted: { it: 'ARRESTATO', en: 'BUSTED', es: 'ARRESTADO', ru: 'ПОЙМАН' },
@@ -175,6 +179,10 @@ export function t (key, vars) {
 
 // ---------- nomi propri tradotti dal testo italiano ----------
 const NOMI = {
+  // bici della concessionaria
+  '🚲 Citybike': { en: '🚲 City bike', es: '🚲 Bici urbana', ru: '🚲 Городской велосипед' },
+  '🚲 BMX': { en: '🚲 BMX', es: '🚲 BMX', ru: '🚲 BMX' },
+  '🚴 Bici da corsa': { en: '🚴 Racing bike', es: '🚴 Bici de carreras', ru: '🚴 Гоночный велосипед' },
   // auto della concessionaria
   Utilitaria: { en: 'Compact', es: 'Utilitario', ru: 'Компакт' },
   Berlina: { en: 'Sedan', es: 'Berlina', ru: 'Седан' },

@@ -137,16 +137,22 @@ export function updateDrive (player, dt, colliders, trafficCircles) {
   const throttle = (pressed('KeyW') || pressed('ArrowUp') ? 1 : 0) - (pressed('KeyS') || pressed('ArrowDown') ? 1 : 0);
   const steer = (pressed('KeyA') || pressed('ArrowLeft') ? 1 : 0) - (pressed('KeyD') || pressed('ArrowRight') ? 1 : 0);
 
+  // le bici: piccole, senza danni, con retromarcia corta (mezzo passo)
+  const isBike = !!(player.car && player.car.userData.bike);
+  const backOff = isBike ? 0.5 : 1.3;      // sporgenza dei cerchi di collisione
+  const carRad = isBike ? 0.55 : 1.15;
+  const maxRev = isBike ? -2.2 : MAX_REVERSE;
+
   // i danni da scontro rendono l'auto più lenta e meno reattiva
   const dmg = player.carDamage || 0;
-  const acc = ACCEL * (1 - dmg * 0.5);
+  const acc = ACCEL * (isBike ? 0.6 : 1) * (1 - dmg * 0.5);
   const cap = (player.maxSpeed || MAX_SPEED) * (1 - dmg);
 
   if (throttle > 0) player.speed += acc * dt;
   else if (throttle < 0) player.speed -= (player.speed > 0 ? BRAKE : acc * 0.7) * dt;
   else player.speed -= player.speed * 1.2 * dt; // attrito
 
-  player.speed = Math.max(MAX_REVERSE, Math.min(cap, player.speed));
+  player.speed = Math.max(maxRev, Math.min(cap, player.speed));
   if (Math.abs(player.speed) < 0.02 && throttle === 0) player.speed = 0;
 
   // sterzo più efficace in movimento
@@ -160,18 +166,18 @@ export function updateDrive (player, dt, colliders, trafficCircles) {
 
   // collisioni con due cerchi (davanti e dietro): edifici e altre auto
   let hit = null;
-  for (const off of [1.3, -1.3]) {
+  for (const off of [backOff, -backOff]) {
     const bx = player.carPos.x + Math.sin(player.heading) * off;
     const bz = player.carPos.z + Math.cos(player.heading) * off;
     const p = { x: bx, z: bz, y: player.carPos.y || 0 }; // la quota serve ai muri del garage
-    const n = resolveCollisions(p, 1.15, colliders);
+    const n = resolveCollisions(p, carRad, colliders);
     if (n) {
       player.carPos.x += p.x - bx;
       player.carPos.z += p.z - bz;
       hit = n;
     }
     if (trafficCircles && trafficCircles.length &&
-        resolveCircles(p, 1.15, trafficCircles)) {
+        resolveCircles(p, carRad, trafficCircles)) {
       player.carPos.x += p.x - bx;
       player.carPos.z += p.z - bz;
       hit = hit || { x: (p.x - bx), z: (p.z - bz) };
@@ -183,7 +189,8 @@ export function updateDrive (player, dt, colliders, trafficCircles) {
   if (hit && Math.abs(player.speed) > 3 && player.bumpCooldown <= 0) {
     player.speed *= 0.4; // tonfo morbido
     // ogni scontro rovina l'auto: consuma velocità massima e accelerazione
-    player.carDamage = Math.min(0.6, (player.carDamage || 0) + 0.12);
+    // (le bici non si rovinano: al massimo si fa male il ginocchio!)
+    if (!isBike) player.carDamage = Math.min(0.6, (player.carDamage || 0) + 0.12);
     player.bumpCooldown = 0.4;
     bumped = true;
   }

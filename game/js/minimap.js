@@ -13,7 +13,7 @@ export function createMinimap (canvasEl, map) {
   const sy = (wz, pz) => (wz - pz) * SCALE + R;
 
   function update (state) {
-    const { player, missions, barber, dealer, traffic, coins, heists, pads } = state;
+    const { player, missions, barber, dealer, traffic, coins, heists, pads, bikes } = state;
     const driving = player.mode === 'drive';
     const p = driving ? player.carPos : player.pos;
     const heading = driving ? player.heading : player.yaw;
@@ -53,6 +53,15 @@ export function createMinimap (canvasEl, map) {
     ctx.arc(sx(carPos.x, p.x), sy(carPos.z, p.z), 4, 0, 7);
     ctx.fill();
     ctx.stroke();
+
+    // bici da prendere (🚲, solo se abbastanza vicini)
+    if (bikes) {
+      for (const b of bikes) {
+        if (Math.abs(b.position.x - p.x) < vis && Math.abs(b.position.z - p.z) < vis) {
+          ctx.fillText('🚲', sx(b.position.x, p.x), sy(b.position.z, p.z));
+        }
+      }
+    }
 
     // barbiere e concessionaria (emoji, solo se abbastanza vicini)
     ctx.font = '13px serif';

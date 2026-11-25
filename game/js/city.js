@@ -229,6 +229,48 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   addSea(DEEP, seaEdge * 2, seaTexEW, seaEdge + DEEP / 2, 0);   // est
   addSea(DEEP, seaEdge * 2, seaTexEW, -seaEdge - DEEP / 2, 0);  // ovest
 
+  // ---------- rilievi: colline e montagne tutt'intorno ----------
+  // Oltre la spiaggia, dal mare affiora un anello di rilievi (come la costa
+  // che sta di fronte alla città): colline verdi arrotondate e montagne
+  // rocciose con le cime innevate. Le quattro colline agli angoli della
+  // spiaggia sono vicine e si possono raggiungere a piedi (con collider).
+  // Tutto va in batch: tre soli mesh per prato, roccia e neve.
+  const hillMat = new THREE.MeshLambertMaterial({ color: 0x67a851 });
+  const hillDarkMat = new THREE.MeshLambertMaterial({ color: 0x4f8f45 });
+  const rockMat = new THREE.MeshLambertMaterial({ color: 0x8d8578 });
+  const snowMat = new THREE.MeshLambertMaterial({ color: 0xf4f8fb });
+
+  function addHill (x, z, r, h, mat, solido) {
+    const geo = new THREE.ConeGeometry(r, h, 7 + Math.floor(Math.random() * 4));
+    geo.rotateY(Math.random() * Math.PI); // spigoli a caso: silhouette diverse
+    put(geo, mat, x, h / 2 - 2.5, z, { cast: true, receive: true });
+    if (solido) colliders.push({ minX: x - r * 0.75, maxX: x + r * 0.75, minZ: z - r * 0.75, maxZ: z + r * 0.75 });
+    if (x + r < HALF + 80) mapHills.push({ x, z, r }); // se sta nella minimappa
+  }
+  const mapHills = [];
+
+  function addMountain (x, z, r, h) {
+    put(new THREE.ConeGeometry(r, h, 8), rockMat, x, h / 2 - 3, z, { cast: true });
+    if (h > 75) {
+      // cima innevata: un cono bianco che avvolge la punta
+      put(new THREE.ConeGeometry(r * 0.31, h * 0.3, 8), snowMat, x, h * 0.85 - 3, z, { cast: true });
+    }
+  }
+
+  for (let k = 0; k < 26; k++) {
+    const a = (k / 26) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+    const dist = 250 + Math.random() * 250; // tra la spiaggia e la nebbia
+    const x = Math.cos(a) * dist;
+    const z = Math.sin(a) * dist;
+    if (Math.random() < 0.45) addMountain(x, z, 26 + Math.random() * 34, 60 + Math.random() * 70);
+    else addHill(x, z, 20 + Math.random() * 24, 12 + Math.random() * 22, k % 2 ? hillMat : hillDarkMat, false);
+  }
+  // le quattro colline sugli angoli della spiaggia: vicino e tutto verde
+  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+    addHill(sx * 208, sz * 208, 11 + Math.random() * 4, 7 + Math.random() * 5, hillMat, true);
+  }
+
+
   // centri delle strade (verticali e orizzontali)
   const roadCenters = [];
   for (let i = 0; i <= GRID; i++) roadCenters.push(-HALF + ROAD / 2 + i * CELL);
@@ -705,6 +747,13 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
       const cx = -HALF + ROAD + i * CELL + BLOCK / 2;
       const cz = -HALF + ROAD + j * CELL + BLOCK / 2;
       g.fillRect(M(cx - (BLOCK - 4) / 2), M(cz - (BLOCK - 4) / 2), (BLOCK - 4) * mapS, (BLOCK - 4) * mapS);
+    }
+    // colline (cerchi verdi scuri)
+    g.fillStyle = '#4f8f45';
+    for (const h of mapHills) {
+      g.beginPath();
+      g.arc(M(h.x), M(h.z), h.r * mapS, 0, 7);
+      g.fill();
     }
     // edifici
     g.fillStyle = '#646e78';
