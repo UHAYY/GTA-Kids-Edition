@@ -230,6 +230,10 @@ const NOMI = {
   OSPEDALE: { en: 'HOSPITAL', es: 'HOSPITAL', ru: 'БОЛЬНИЦА' },
   '🔧 OFFICINA 🔧': { en: '🔧 WORKSHOP 🔧', es: '🔧 TALLER 🔧', ru: '🔧 АВТОСЕРВИС 🔧' },
   '🚗 CONCESSIONARIA 🚗': { en: '🚗 CAR DEALER 🚗', es: '🚗 CONCESIONARIO 🚗', ru: '🚗 АВТОСАЛОН 🚗' },
+  // paesini sui rilievi
+  '🏘️ Collinetta Fiorita': { en: '🏘️ Flowery Hill', es: '🏘️ Colina Florida', ru: '🏘️ Цветущий холм' },
+  '🏘️ Villaggio del Sole': { en: '🏘️ Sunny Village', es: '🏘️ Aldea del Sol', ru: '🏘️ Солнечная деревня' },
+  '🏘️ Rifugio della Neve': { en: '🏘️ Snow Refuge', es: '🏘️ Refugio de la Nieve', ru: '🏘️ Снежное убежище' },
   '✂ BARBIERE DA TONY ✂': { en: "✂ TONY'S BARBER ✂", es: '✂ BARBERÍA DE TONY ✂', ru: '✂ БАРБЕРШОП ТОНИ ✂' },
   // barbiere: capelli
   'Taglio originale': { en: 'Original look', es: 'Corte original', ru: 'Обычная стрижка' },

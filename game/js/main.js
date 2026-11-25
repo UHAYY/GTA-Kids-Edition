@@ -5,7 +5,7 @@
 // -------------------------------------------------------------
 import * as THREE from 'three';
 import { initInput, consumePress, endFrame } from './input.js';
-import { buildCity, resolveCollisions, CITY_SIZE, GRID } from './city.js';
+import { buildCity, resolveCollisions, CITY_SIZE, GRID, terrainHeight, MINI_TOWNS } from './city.js';
 import { loadAssets } from './assets.js';
 import { createPlayer, attachCar, updateWalk, updateDrive, tryEnterExit, trySit, syncCarVisual, repairCar } from './player.js';
 import { createNPCs, updateNPCs } from './npc.js';
@@ -292,6 +292,17 @@ async function init () {
       scene.add(bike);
       freeBikes.push(bike);
     }
+    // e una bici parcheggiata in ogni paesino sui colli: chi sale a piedi
+    // o in macchina la trova all'angolo dell'incrocio
+    for (const t of MINI_TOWNS) {
+      const k = BIKE_KINDS[Math.floor(Math.random() * BIKE_KINDS.length)];
+      const bike = createBike(k.color, k.kind);
+      bike.position.set(t.x + 6.5, terrainHeight(t.x + 6.5, t.z + 6.5), t.z + 6.5);
+      bike.rotation.y = Math.random() * Math.PI * 2;
+      bike.userData.topSpeed = k.topSpeed;
+      scene.add(bike);
+      freeBikes.push(bike);
+    }
   }
 
   const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
@@ -315,7 +326,7 @@ async function init () {
     marks: heists.spots.concat([
       { x: hospital.spawn.x, z: hospital.spawn.z, icon: '🏥' },
       { x: workshop.pos.x, z: workshop.pos.z, icon: '🔧' }
-    ])
+    ]).concat(MINI_TOWNS.map(t => ({ x: t.x, z: t.z, icon: '🏘️' })))
   }), (wx, wz) => {
     if (wx === null) { // dal pulsante "togli il navigatore"
       if (nav.on) { nav.on = false; hud.toast(tr('nav_clear')); }
@@ -357,7 +368,7 @@ async function init () {
     resolveCollisions(p, 1, colliders);
     const mesh = new THREE.Mesh(coinGeo, coinMat);
     mesh.castShadow = true;
-    mesh.position.set(p.x, 1.2, p.z);
+    mesh.position.set(p.x, terrainHeight(p.x, p.z) + 1.2, p.z); // anche sui colli
     scene.add(mesh);
     coins.push({ mesh, taken: false, spin: Math.random() * Math.PI * 2 });
   }
@@ -370,7 +381,8 @@ async function init () {
       if (c.taken) continue;
       allTaken = false;
       c.mesh.rotation.y += dt * 3;
-      c.mesh.position.y = 1.2 + Math.sin(t * 2 + c.spin) * 0.15;
+      c.mesh.position.y = terrainHeight(c.mesh.position.x, c.mesh.position.z) +
+        1.2 + Math.sin(t * 2 + c.spin) * 0.15;
       const dx = c.mesh.position.x - playerPos.x;
       const dz = c.mesh.position.z - playerPos.z;
       if (dx * dx + dz * dz < radius * radius) {

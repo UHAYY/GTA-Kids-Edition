@@ -2,6 +2,7 @@
 // Ritira e consegna pizze, pacchi, regali e altro seguendo il faro luminoso.
 import * as THREE from 'three';
 import { t as tr, locale } from './i18n.js';
+import { terrainHeight } from './city.js';
 
 // ogni missione ha le sue frasi per lingua (m_<key>_pickup / m_<key>_deliver)
 const TYPES = [
@@ -79,7 +80,8 @@ export function createMissions (scene, pois) {
 function setBeacon (m, pos, color) {
   if (m.beacon) m.scene.remove(m.beacon);
   m.beacon = makeBeacon(color, m.type.icon);
-  m.beacon.position.set(pos.x, 0, pos.z);
+  // il faro sta sul terreno, anche sui colli e nei paesini in quota
+  m.beacon.position.set(pos.x, terrainHeight(pos.x, pos.z), pos.z);
   m.scene.add(m.beacon);
   m.pointer.visible = true;
 }

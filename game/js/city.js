@@ -34,6 +34,25 @@ function makeBuildingTexture (baseColor) {
   return tex;
 }
 
+// texture da casetta: muro pastello con due file di finestrine (una faccia =
+// una texture, senza ripetizioni: le case sono piccole)
+function makeHouseTexture (baseColor) {
+  const c = document.createElement('canvas');
+  c.width = 96; c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = baseColor;
+  g.fillRect(0, 0, 96, 64);
+  for (let y = 0; y < 2; y++) {
+    for (let x = 0; x < 3; x++) {
+      g.fillStyle = Math.random() < 0.3 ? '#fff3b0' : '#bfdff5';
+      g.fillRect(11 + x * 30, 11 + y * 26, 15, 15);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshLambertMaterial({ map: tex });
+}
+
 // Moltiplica gli UV di una geometria: serve per "scrivere nelle coordinate"
 // quello che prima era texture.repeat, così geometrie con ripetizioni diverse
 // possono condividere lo stesso materiale e fondersi in una mesh unica.
@@ -49,7 +68,7 @@ function scaleUV (geo, su, sv) {
 // usano la mesh del terreno, la fisica (surfaceY) e la minimappa.
 // Nota: dentro la città (r < 218) vale -0.06, un pelo sotto il prato e
 // la sabbia che lo coprono: così non si vede né sfrega (z-fighting).
-export function terrainHeight (x, z) {
+function rawHeight (x, z) {
   const r = Math.max(Math.abs(x), Math.abs(z)); // distanza "a quadri", come la città
   if (r < 218) return -0.06;
   // salita dolce dal livello del mare: tutte le quote crescono con t,
@@ -75,6 +94,44 @@ export function terrainHeight (x, z) {
   return h;
 }
 
+// ---------- i paesini sui rilievi ----------
+// Tre paesini di montagna: il terreno intorno si appiattisce in una
+// terrazza in erba (con una transizione dolce), così le casette stanno
+// in piano e ci si arriva guidando su per i colli. La terrazza è parte
+// di terrainHeight: la vedono uguale la mesh, l'auto e la minimappa.
+export const TOWN_ROAD = 8; // larghezza della strada del paesino
+export const MINI_TOWNS = [
+  { x: 295, z: -150, r: 30, name: '🏘️ Collinetta Fiorita' },   // collina a est
+  { x: -250, z: 270, r: 28, name: '🏘️ Villaggio del Sole' },   // collina a sud-ovest
+  { x: -210, z: -330, r: 30, name: '🏘️ Rifugio della Neve' }   // tra le montagne a nord
+];
+for (const t of MINI_TOWNS) t.h = rawHeight(t.x, t.z); // quota della terrazza
+const TOWN_FADE = 24; // larghezza della scarpata dolce intorno alla terrazza
+
+// mescola del paese in un punto: 1 sulla terrazza, 0 oltre la scarpata
+export function townMix (x, z) {
+  let m = 0;
+  for (const t of MINI_TOWNS) {
+    const d = Math.hypot(x - t.x, z - t.z);
+    if (d < t.r + TOWN_FADE) m = Math.max(m, Math.min(1, (t.r + TOWN_FADE - d) / TOWN_FADE));
+  }
+  return m;
+}
+
+export function terrainHeight (x, z) {
+  let h = rawHeight(x, z);
+  // le terrazze dei paesini: dentro il paese il terreno vale t.h,
+  // lungo la scarpata si unisce al colle con una curva morbida
+  for (const t of MINI_TOWNS) {
+    const d = Math.hypot(x - t.x, z - t.z);
+    if (d >= t.r + TOWN_FADE) continue;
+    const k = Math.min(1, (t.r + TOWN_FADE - d) / TOWN_FADE);
+    const s = k * k * (3 - 2 * k); // smoothstep: pendenza zero ai bordi
+    h += (t.h - h) * s;
+  }
+  return h;
+}
+
 // colore del terreno a una certa quota (sabbia → prato → roccia → neve),
 // con un po' di variazione a seconda del posto: lo usano i vertici della
 // mesh e i pixel della mappa della minimappa
@@ -90,6 +147,9 @@ export function terrainColorAt (h, x, z, out = _tc) {
   out.copy(TER_GRASS).lerp(TER_GRASS2, varz * 0.7);
   if (h > 20) out.lerp(TER_ROCK, Math.min(1, (h - 20) / 14));
   if (h > 48) out.lerp(TER_SNOW, Math.min(1, (h - 48) / 14));
+  // i paesini restano in erba anche in quota (sono in una radura)
+  const tm = townMix(x, z);
+  if (tm > 0) out.lerp(TER_GRASS, tm * 0.85);
   return out;
 }
 
@@ -285,7 +345,9 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   // Un grande piano sconnesso dai vertici colorati secondo la quota:
   // un'unica mesh per tutta l'isola, un solo draw call.
   const TER_SIZE = 1240;
-  const terGeo = new THREE.PlaneGeometry(TER_SIZE, TER_SIZE, 124, 124);
+  // 168 suddivisioni (non 124): le terrazze dei paesini hanno bisogno di
+  // vertici più fitti per seguire le scarpate dolci senza spigoli
+  const terGeo = new THREE.PlaneGeometry(TER_SIZE, TER_SIZE, 168, 168);
   terGeo.rotateX(-HPI);
   {
     const p = terGeo.attributes.position;
@@ -391,7 +453,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8d6e63 });
   const leavesMat = new THREE.MeshLambertMaterial({ color: 0x66bb6a });
 
-  function addTree (x, z) {
+  function addTree (x, z, y = 0) {
     // niente alberi che sbucano dagli edifici
     for (const c of colliders) {
       if (x > c.minX - 1.5 && x < c.maxX + 1.5 && z > c.minZ - 1.5 && z < c.maxZ + 1.5) return;
@@ -405,7 +467,7 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     leaves.position.y = 2.8;
     leaves.castShadow = true;
     g.add(leaves);
-    g.position.set(x, 0, z);
+    g.position.set(x, y, z);
     batch(trunk);
     batch(leaves);
     colliders.push({ minX: x - 0.5, maxX: x + 0.5, minZ: z - 0.5, maxZ: z + 0.5 });
@@ -432,6 +494,11 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
       buildingMats.push(new THREE.MeshLambertMaterial({ map: makeBuildingTexture(BUILDING_COLORS[ci]) }));
     }
   }
+  // e quelle da casetta per i paesini sui rilievi
+  const houseMats = BUILDING_COLORS.map(c => makeHouseTexture(c));
+  // tetti di terracotta e legno per le casette (i grigi stanno bene in città,
+  // ma un paesino di montagna vuole i tetti caldi)
+  const townRoofMats = ['#c94f3d', '#a8623c', '#8a6d54'].map(c => new THREE.MeshLambertMaterial({ color: c }));
 
   // insegne dei negozi: una texture per nome, disegnata su canvas e riusata
   // su tutti gli edifici (così restano poche texture in memoria)
@@ -677,6 +744,106 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     }
   }
 
+  // ---------- i paesini sui rilievi ----------
+  // Ogni paese ha la sua terrazza in erba (scavata in terrainHeight): due
+  // strade che si incrociano, otto casette col tetto a punta, lampioni,
+  // un cartello di benvenuto col nome e gli alberi tutto intorno. Niente
+  // traffico né semafori: laggiù si va piano. I POI portano su per i colli
+  // monete e missioni, così c'è un motivo per salire.
+  const townSignMat = (name) => {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff8e1';
+    g.fillRect(0, 0, 512, 128);
+    g.strokeStyle = '#8d6e63';
+    g.lineWidth = 16;
+    g.strokeRect(8, 8, 496, 112);
+    g.fillStyle = '#4a3b28';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    let size = 52;
+    do {
+      g.font = `bold ${size}px "Comic Sans MS", "Chalkboard SE", sans-serif`;
+      size -= 4;
+    } while (g.measureText(name).width > 460 && size > 24);
+    g.fillText(name, 256, 68);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshLambertMaterial({ map: tex });
+  };
+
+  for (const t of MINI_TOWNS) {
+    const y = t.h;
+    const R = t.r;
+
+    // le due strade che si incrociano (un pelo di quota diverso: niente
+    // z-fighting dove si sovrappongono)
+    put(new THREE.PlaneGeometry(R * 2, TOWN_ROAD), roadMat,
+      t.x, y + 0.05, t.z, { rx: -HPI, receive: true });
+    put(new THREE.PlaneGeometry(TOWN_ROAD, R * 2), roadMat,
+      t.x, y + 0.065, t.z, { rx: -HPI, receive: true });
+
+    // otto casette: due per quadrante, con tetto a punta e porta verso il paese
+    for (const [qx, qz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      for (const [fx, fz] of [[0.62, 0.32], [0.32, 0.62]]) {
+        const cx = t.x + qx * R * fx + (Math.random() - 0.5) * 2.4;
+        const cz = t.z + qz * R * fz + (Math.random() - 0.5) * 2.4;
+        const w = 7 + Math.random() * 3;
+        const d = 6 + Math.random() * 3;
+        const hh = 3.5 + Math.random() * 2.5;
+        const ci = Math.floor(Math.random() * BUILDING_COLORS.length);
+
+        const geo = new THREE.BoxGeometry(w, hh, d);
+        const mesh = new THREE.Mesh(geo, houseMats[ci]);
+        mesh.position.set(cx, y + hh / 2, cz);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        batch(mesh);
+
+        // tetto a punta: piramide a 4 spigoli, stirata sul rettangolo della casa
+        const roofG = new THREE.ConeGeometry((Math.max(w, d) / 2 + 0.7) * Math.SQRT2, 2.2, 4, 1);
+        roofG.rotateY(HPI / 2);
+        roofG.scale(1, 1, d / w);
+        put(roofG, townRoofMats[Math.floor(Math.random() * townRoofMats.length)], cx, y + hh + 1.1, cz, { cast: true });
+
+        // porta sul lato che guarda il centro del paese
+        const horiz = Math.abs(t.x - cx) > Math.abs(t.z - cz);
+        const px = horiz ? cx + Math.sign(t.x - cx) * (w / 2 + 0.07) : cx;
+        const pz = horiz ? cz : cz + Math.sign(t.z - cz) * (d / 2 + 0.07);
+        put(new THREE.BoxGeometry(horiz ? 0.12 : 1.4, 2.3, horiz ? 1.4 : 0.12), doorMat,
+          px, y + 1.15, pz);
+
+        colliders.push({ minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - d / 2, maxZ: cz + d / 2 });
+        mapBuildings.push({ x: cx, z: cz, w, d });
+      }
+    }
+
+    // lampioni ai quattro angoli dell'incrocio
+    for (const [sx, sz] of [[5.6, 5.6], [-5.6, -5.6], [5.6, -5.6], [-5.6, 5.6]]) {
+      put(new THREE.CylinderGeometry(0.12, 0.15, 4.4, 6), poleMat, t.x + sx, y + 2.2, t.z + sz);
+      put(new THREE.SphereGeometry(0.36, 10, 10), lampMat, t.x + sx, y + 4.6, t.z + sz);
+    }
+
+    // cartello di benvenuto all'ingresso (dal lato della città)
+    const signMat = townSignMat(tn(t.name));
+    const sxg = t.x + TOWN_ROAD / 2 + 3.2, szg = t.z + R - 5;
+    put(new THREE.BoxGeometry(0.16, 2.6, 0.16), trunkMat, sxg - 2.1, y + 1.3, szg, { cast: true });
+    put(new THREE.BoxGeometry(0.16, 2.6, 0.16), trunkMat, sxg + 2.1, y + 1.3, szg, { cast: true });
+    put(new THREE.BoxGeometry(4.8, 1.2, 0.14), signMat, sxg, y + 2.6, szg, { cast: true });
+
+    // alberi attorno alla radura (in piedi sul terreno, che lì pende)
+    for (let k = 0; k < 8; k++) {
+      const a = k * (Math.PI * 2 / 8) + 0.35 + (k % 2) * 0.2;
+      const tx = t.x + Math.cos(a) * (R + 5 + (k % 3) * 4);
+      const tz = t.z + Math.sin(a) * (R + 5 + (k % 3) * 4);
+      addTree(tx, tz, terrainHeight(tx, tz));
+    }
+
+    // punti di interesse: qui nascono monete e missioni (in quota!)
+    pois.push({ x: t.x + 8, z: t.z + 8 }, { x: t.x - R * 0.55, z: t.z - R * 0.55 });
+  }
+
   // semafori che ciclano da soli (verde → giallo → rosso) a due terzi degli
   // incroci. Le luci condividono tre materiali animati in updateCity: anche
   // fuse in una mesh per colore, il ciclo funziona uguale.
@@ -787,6 +954,11 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     for (const c of roadCenters) {
       g.fillRect(M(c - ROAD / 2), M(-HALF), ROAD * mapS, CITY_SIZE * mapS);
       g.fillRect(M(-HALF), M(c - ROAD / 2), CITY_SIZE * mapS, ROAD * mapS);
+    }
+    // strade dei paesini sui rilievi
+    for (const t of MINI_TOWNS) {
+      g.fillRect(M(t.x - t.r), M(t.z - TOWN_ROAD / 2), t.r * 2 * mapS, TOWN_ROAD * mapS);
+      g.fillRect(M(t.x - TOWN_ROAD / 2), M(t.z - t.r), TOWN_ROAD * mapS, t.r * 2 * mapS);
     }
     // parchi
     g.fillStyle = '#7ec850';
