@@ -123,7 +123,10 @@ export function updateTraffic (cars, dt, playerPos, lights, lightPhase) {
         if (lights.has(road + '|' + rc)) dLight = Math.min(dLight, d);
       }
       if (dLight !== Infinity) {
-        const stopLine = dLight - 7.5;
+        // linea di stop a 11 m dal centro: le strisce pedonali sono a 7,1 m,
+        // così l'auto si ferma PRIMA delle strisce e i pedoni attraversano
+        // comodi (il muso dell'auto sporge 2,4 m oltre il centro)
+        const stopLine = dLight - 11;
         if (stopLine < 10.5 && stopLine > 0.5) {
           blocked = true;
           lightStop = true;

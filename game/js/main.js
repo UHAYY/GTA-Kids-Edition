@@ -9,6 +9,7 @@ import { buildCity, resolveCollisions, CITY_SIZE, GRID } from './city.js';
 import { loadAssets } from './assets.js';
 import { createPlayer, attachCar, updateWalk, updateDrive, tryEnterExit, trySit, syncCarVisual, repairCar } from './player.js';
 import { createNPCs, updateNPCs } from './npc.js';
+import { createCrossers } from './crossers.js';
 import { createTraffic, updateTraffic } from './traffic.js';
 import { createMissions, startMission, updateMissions } from './missions.js';
 import { createHUD } from './hud.js';
@@ -240,6 +241,8 @@ async function init () {
 
   const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
   const talk = createTalk({ npcs, player, camera, promptEl: null });
+  // pedoni sulle strisce: aspettano il rosso e attraversano
+  const crossers = createCrossers(scene, roadCenters, lights, lightPhase, colliders, assets.createEric, 14);
   // le auto del traffico nascono lontane dal giocatore e dalla sua auto
   const traffic = createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 10,
     [{ x: player.pos.x, z: player.pos.z }, { x: 24, z: 30 }]);
@@ -593,7 +596,7 @@ async function init () {
   buildLangSwitch(el('langs')); // bandierine per cambiare lingua nel menu
   menuEl.classList.remove('hidden');
   uiState = 'menu';
-  window.__game = { scene, camera, player, barber, dealer, workshop, smoke, assets, npcs, traffic, benches, missions, police, heists,
+  window.__game = { scene, camera, player, barber, dealer, workshop, smoke, assets, npcs, traffic, benches, missions, police, heists, crossers,
     lights, lightPhase, city, // debug semafori e mondo
     // debug: forzare lo stato (es. test del conto dell'ospedale)
     __debug: { setUiState: s => { uiState = s; } } };
@@ -811,6 +814,8 @@ async function init () {
       updateBarberBubble();
       updateNPCs(npcs, dt, colliders, carCircles, player.pos, playerCarCircles,
         () => { sfx.bump(); hud.toast(tr('npc_bump')); });
+      crossers.updateCrossers(dt, carCircles, playerCarCircles, player.pos,
+        () => { sfx.bump(); hud.toast(tr('npc_bump')); });
       updateTraffic(traffic, dt, playerPos, lights, lightPhase);
       updateCoins(dt, t, playerPos);
       updateMissions(missions, dt, playerPos, hud, sfx);
@@ -871,6 +876,7 @@ async function init () {
       player.rig.group.rotation.y = player.yaw;
       player.rig.updateDecos();
       updateNPCs(npcs, dt, colliders);
+      crossers.updateCrossers(dt);
       updateTraffic(traffic, dt, player.pos, lights, lightPhase);
 
       const front = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw)).multiplyScalar(1.55);
@@ -884,12 +890,15 @@ async function init () {
       player.rig.group.rotation.y = player.yaw;
       player.rig.updateDecos();
       updateNPCs(npcs, dt, colliders);
+      crossers.updateCrossers(dt);
       updateTraffic(traffic, dt, player.pos, lights, lightPhase);
     } else if (uiState === 'talking') {
       // stai parlando con un passante: il mondo vive, tu sei fermo e la
       // camera guarda l'NPC da dietro alle tue spalle
       if (!talk.isOpen()) uiState = 'playing'; // chiuso col pulsante o Esc
       updateNPCs(npcs, dt, colliders, carCircles, player.pos, playerCarCircles,
+        () => { sfx.bump(); hud.toast(tr('npc_bump')); });
+      crossers.updateCrossers(dt, carCircles, playerCarCircles, player.pos,
         () => { sfx.bump(); hud.toast(tr('npc_bump')); });
       updateTraffic(traffic, dt, player.pos, lights, lightPhase);
       updateCoins(dt, t, player.pos);

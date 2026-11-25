@@ -31,7 +31,9 @@ export function createNPCs (scene, count, colliders, pois, ericFactory) {
   return npcs;
 }
 
-// ----- ragdoll -----
+// ----- ragdoll (condiviso anche con i pedoni sulle strisce) -----
+export { startRagdoll, updateRagdoll, hitByCars };
+
 const GETUP_WAIT = 3; // secondi a terra prima di rialzarsi
 
 // vx, vz: velocità dell'auto; radialX/Z: la spinta perpendicolare (di lato)
