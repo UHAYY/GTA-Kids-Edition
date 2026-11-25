@@ -7,6 +7,13 @@ export function initInput () {
     if (!e.repeat) justPressed[e.code] = true;
     keys[e.code] = true;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+    // F11: tutto schermo sì/no. Serve preventDefault, altrimenti il
+    // browser/Electron attiva anche il suo e si doppiano le finestre
+    if (e.code === 'F11') {
+      e.preventDefault();
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
   });
   window.addEventListener('keyup', (e) => { keys[e.code] = false; });
   window.addEventListener('blur', () => {

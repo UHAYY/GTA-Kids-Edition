@@ -56,10 +56,10 @@ const STR = {
   gun_hint: { it: '🔫 <b>F</b> = sparare', en: '🔫 <b>F</b> = shoot', es: '🔫 <b>F</b> = disparar', ru: '🔫 <b>F</b> = стрелять' },
   robbery_ongoing: { it: '💰 Rapina in corso…', en: '💰 Robbery in progress…', es: '💰 Robo en curso…', ru: '💰 Идёт ограбление…' },
   help_line: {
-    it: '<b>W A S D</b> muoviti &nbsp;·&nbsp; <b>Shift</b> corri &nbsp;·&nbsp; <b>E</b> entra / esci dalla macchina',
-    en: '<b>W A S D</b> move &nbsp;·&nbsp; <b>Shift</b> run &nbsp;·&nbsp; <b>E</b> get in / out of the car',
-    es: '<b>W A S D</b> muévete &nbsp;·&nbsp; <b>Shift</b> corre &nbsp;·&nbsp; <b>E</b> entra / sal del coche',
-    ru: '<b>W A S D</b> движение &nbsp;·&nbsp; <b>Shift</b> бег &nbsp;·&nbsp; <b>E</b> сесть / выйти из машины'
+    it: '<b>W A S D</b> muoviti &nbsp;·&nbsp; <b>Shift</b> corri &nbsp;·&nbsp; <b>E</b> entra / esci dalla macchina &nbsp;·&nbsp; <b>F11</b> tutto schermo',
+    en: '<b>W A S D</b> move &nbsp;·&nbsp; <b>Shift</b> run &nbsp;·&nbsp; <b>E</b> get in / out of the car &nbsp;·&nbsp; <b>F11</b> fullscreen',
+    es: '<b>W A S D</b> muévete &nbsp;·&nbsp; <b>Shift</b> corre &nbsp;·&nbsp; <b>E</b> entra / sal del coche &nbsp;·&nbsp; <b>F11</b> pantalla completa',
+    ru: '<b>W A S D</b> движение &nbsp;·&nbsp; <b>Shift</b> бег &nbsp;·&nbsp; <b>E</b> сесть / выйти из машины &nbsp;·&nbsp; <b>F11</b> весь экран'
   },
   prompt_enter_car: { it: 'Premi <b>E</b> per salire in macchina', en: 'Press <b>E</b> to get in the car', es: 'Pulsa <b>E</b> para subir al coche', ru: 'Нажми <b>E</b>, чтобы сесть в машину' },
   prompt_enter_bike: { it: 'Premi <b>E</b> per salire in bici', en: 'Press <b>E</b> to get on the bike', es: 'Pulsa <b>E</b> para subir a la bici', ru: 'Нажми <b>E</b>, чтобы сесть на велосипед' },
