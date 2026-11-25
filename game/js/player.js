@@ -207,9 +207,16 @@ export function tryEnterExit (player, carGroup) {
   if (player.mode === 'walk') {
     if (player.pos.distanceTo(carGroup.position) < 3.6) {
       player.mode = 'drive';
-      player.rig.group.visible = false;
-      player.rig.decosVisible = false; // nascondi anche capelli/mani (sono fuori dal gruppo)
-      for (const d of player.rig.decos) d.obj.visible = false;
+      if (carGroup.userData.bike) {
+        // in bici il rider si vede: niente rig nascosto, subito in sella
+        // (la posa "seduto" la tiene in equilibrio sulla sella)
+        player.rig.group.visible = true;
+        player.rig.sitPhase = 'sat';
+      } else {
+        player.rig.group.visible = false;
+        player.rig.decosVisible = false; // nascondi anche capelli/mani (sono fuori dal gruppo)
+        for (const d of player.rig.decos) d.obj.visible = false;
+      }
       return 'entered';
     }
   } else {
@@ -219,9 +226,30 @@ export function tryEnterExit (player, carGroup) {
     player.mode = 'walk';
     player.rig.group.visible = true;
     player.rig.decosVisible = true;
+    if (player.car && player.car.userData.bike) player.rig.sitPhase = null; // dal sellino si rialzano le gambe
     return 'exited';
   }
   return null;
+}
+
+// In bici il rig resta visibile ed è il rider: seduto in sella, ruotato
+// come la bici, con l'animazione "seduto" al posto delle gambe che pedaleranno
+// in una futura versione. Da chiamare ogni frame di guida in bici.
+const SIT_BUTT = 0.52; // altezza del sederone nella posa "seduto" (come le panchine)
+export function syncBikeRider (player, dt) {
+  const rig = player.rig;
+  if (rig.sitPhase !== 'sat') rig.sitPhase = 'sat'; // resta seduto
+  const s = player.car.userData.saddle || { y: 0.88, z: -0.45 };
+  const sin = Math.sin(player.heading);
+  const cos = Math.cos(player.heading);
+  rig.group.position.set(
+    player.carPos.x + sin * s.z,                      // la sella è un po' indietro
+    (player.carPos.y || 0) + s.y - SIT_BUTT,          // il sederone finisce sulla sella
+    player.carPos.z + cos * s.z
+  );
+  rig.group.rotation.y = player.heading; // guarda dove guarda la bici
+  animateRig(rig, dt, false, false);
+  rig.updateDecos();
 }
 
 // Sincronizza la mesh dell'auto con la fisica (anche la quota: garage!)

@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { initInput, consumePress, endFrame } from './input.js';
 import { buildCity, resolveCollisions, CITY_SIZE, GRID, terrainHeight, MINI_TOWNS } from './city.js';
 import { loadAssets } from './assets.js';
-import { createPlayer, attachCar, updateWalk, updateDrive, tryEnterExit, trySit, syncCarVisual, repairCar } from './player.js';
+import { createPlayer, attachCar, updateWalk, updateDrive, tryEnterExit, trySit, syncCarVisual, syncBikeRider, repairCar } from './player.js';
 import { createNPCs, updateNPCs } from './npc.js';
 import { createCrossers } from './crossers.js';
 import { createTraffic, updateTraffic } from './traffic.js';
@@ -853,6 +853,8 @@ async function init () {
           }
         }
         syncCarVisual(player, dt);
+        // in bici il personaggio si vede: è seduto in sella
+        if (player.car.userData && player.car.userData.bike) syncBikeRider(player, dt);
         // fumo nero dal cofano quando l'auto è molto rovinata (più danno
         // = più sbuffi al secondo), anche da ferma. Le bici non fumano!
         if (!(player.car.userData && player.car.userData.bike) &&
@@ -1062,6 +1064,7 @@ async function init () {
         player.pos.y = 0;
         player.rig.group.visible = true;
         player.rig.decosVisible = true;
+        player.rig.sitPhase = null; // niente pose sedute di mezzo (bici compresa)
         for (const d of player.rig.decos) d.obj.visible = true;
         // ti riportano l'auto davanti all'ospedale
         player.carPos.copy(hospital.carSpot);

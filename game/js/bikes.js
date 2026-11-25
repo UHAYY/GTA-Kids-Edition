@@ -72,6 +72,7 @@ export function createBike (color = '#e53935', kind = 'city') {
   part(new THREE.CylinderGeometry(0.09, 0.09, 0.03, 10), metalMat, 0, R, R * 0.1)
     .rotation.z = HPI;
 
-  g.userData = { bike: true, size: [R * 4.2 + 0.4, R * 3.4], kind };
+  // sella: dove si posa il rider (serve a player.js per sedersi in sella)
+  g.userData = { bike: true, size: [R * 4.2 + 0.4, R * 3.4], kind, saddle: { y: R * 2.75, z: -R * 1.4 } };
   return g;
 }
