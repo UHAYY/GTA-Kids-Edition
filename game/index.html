@@ -44,6 +44,21 @@
   <!-- schermata MORTO / ARRESTATO -->
   <div id="bigmsg" class="hidden"></div>
 
+  <!-- mappa completa (si apre cliccando sulla minimappa) -->
+  <div id="bigmap" class="hidden">
+    <div class="bigmap-box">
+      <div class="bigmap-head">
+        <span data-i18n="map_title">🗺️ Mappa della città</span>
+        <span class="bigmap-btns">
+          <button id="map-clear" data-i18n="map_clear">🧭 Togli il navigatore</button>
+          <button id="map-close" data-i18n="map_close">✕ Chiudi</button>
+        </span>
+      </div>
+      <canvas id="bigmap-canvas" width="720" height="720"></canvas>
+      <p class="bigmap-hint" data-i18n="map_hint">👆 Clicca un punto della mappa: il navigatore ti guiderà fin lì!</p>
+    </div>
+  </div>
+
   <!-- bolla del barbiere -->
   <div id="bubble" class="hidden" data-i18n="bubble_barber">✂️ Premi <b>E</b> per personalizzare l'avatar</div>
 

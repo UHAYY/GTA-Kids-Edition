@@ -3,7 +3,7 @@
 // prendono o ti mettono K.O., lo schermo annuncia MORTO (o ARRESTATO).
 // Le stelle si perdono fermandoti nei parcheggi "P" senza farti vedere.
 import * as THREE from 'three';
-import { resolveCollisions } from './city.js';
+import { resolveCollisions, terrainHeight } from './city.js';
 import { animateRig } from './avatar.js';
 import { t } from './i18n.js';
 
@@ -263,7 +263,7 @@ export function createPolice (scene, assets, world) {
       const hit = resolveCollisions(pos, 1.6, colliders);
       c.x = pos.x; c.z = pos.z;
       if (hit) c.speed *= 0.6; // urto contro un edificio: rallenta e riprova
-      c.car.position.set(c.x, 0, c.z);
+      c.car.position.set(c.x, terrainHeight(c.x, c.z), c.z);
       c.car.rotation.y = c.heading;
       // girofarfallio della sirena
       const blink = Math.sin(Date.now() * 0.02) > 0;
@@ -324,6 +324,7 @@ export function createPolice (scene, assets, world) {
           cop.pos.z += Math.cos(cop.yaw) * cop.speed * dt;
           resolveCollisions(cop.pos, 0.5, colliders);
         }
+        cop.pos.y = terrainHeight(cop.pos.x, cop.pos.z); // anche in salita
         cop.shootCd -= dt;
         if (dist < 22 && dist > 2 && cop.shootCd <= 0) {
           cop.shootCd = 1.6 + Math.random() * 0.8 - stars * 0.08;

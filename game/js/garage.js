@@ -6,6 +6,7 @@
 // La fisica resta 2D: l'altezza segue la posizione sulla rampa (surfaceY),
 // e i muri del garage sono collider attivi solo sottoterra (minY).
 import * as THREE from 'three';
+import { terrainHeight } from './city.js';
 
 export const GARAGE_DEPTH = 8;
 const RAMP_START = 12;  // z relativa dove inizia la discesa (quota 0)
@@ -57,7 +58,9 @@ export function surfaceY (who, x, z) {
   }
   who.onRamp = false;
   who.under = 0;
-  return 0;
+  // fuori dai garage la quota è quella del terreno: pianura in città,
+  // colline e montagne oltre la spiaggia
+  return terrainHeight(x, z);
 }
 
 function canvasTex (w, h, draw) {

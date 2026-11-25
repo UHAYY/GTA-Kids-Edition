@@ -124,6 +124,20 @@ const STR = {
 
   // --- monete e concessionaria ---
   coins_n: { it: '🪙 Monete: {n}', en: '🪙 Coins: {n}', es: '🪙 Monedas: {n}', ru: '🪙 Монет: {n}' },
+
+  // --- mappa completa e navigatore ---
+  map_title: { it: '🗺️ Mappa della città', en: '🗺️ City map', es: '🗺️ Mapa de la ciudad', ru: '🗺️ Карта города' },
+  map_hint: {
+    it: '👆 Clicca un punto della mappa: il navigatore ti guiderà fin lì!',
+    en: '👆 Click a spot on the map: the navigator will guide you there!',
+    es: '👆 ¡Haz clic en un punto del mapa y el navegador te llevará!',
+    ru: '👆 Кликни по карте — навигатор доведёт тебя туда!'
+  },
+  map_clear: { it: '🧭 Togli il navigatore', en: '🧭 Turn off navigator', es: '🧭 Quitar el navegador', ru: '🧭 Выключить навигатор' },
+  map_close: { it: '✕ Chiudi', en: '✕ Close', es: '✕ Cerrar', ru: '✕ Закрыть' },
+  nav_set: { it: '🧭 Navigatore acceso! Segui la 📍 sulla minimappa!', en: '🧭 Navigator on! Follow the 📍 on the minimap!', es: '🧭 ¡Navegador encendido! ¡Sigue la 📍 del minimapa!', ru: '🧭 Навигатор включён! Следуй за 📍 на миникарте!' },
+  nav_clear: { it: '🧭 Navigatore spento.', en: '🧭 Navigator off.', es: '🧭 Navegador apagado.', ru: '🧭 Навигатор выключен.' },
+  nav_arrived: { it: '🎯 Sei arrivato a destinazione!', en: "🎯 You've arrived!", es: '🎯 ¡Has llegado a tu destino!', ru: '🎯 Ты на месте!' },
   car_until: { it: '⚡ fino a {v} km/h', en: '⚡ up to {v} km/h', es: '⚡ hasta {v} km/h', ru: '⚡ до {v} км/ч' },
   car_yours: { it: '✓ è la tua', en: '✓ yours', es: '✓ es la tuya', ru: '✓ твоя машина' },
   car_use: { it: '🔄 usa questa', en: '🔄 use this one', es: '🔄 usa esta', ru: '🔄 выбрать' },

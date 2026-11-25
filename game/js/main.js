@@ -14,6 +14,7 @@ import { createTraffic, updateTraffic } from './traffic.js';
 import { createMissions, startMission, updateMissions } from './missions.js';
 import { createHUD } from './hud.js';
 import { createMinimap } from './minimap.js';
+import { createBigMap } from './bigmap.js';
 import { initAudio, sfx } from './audio.js';
 import {
   applyAvatar, applyBody, animateRig,
@@ -303,6 +304,32 @@ async function init () {
   const missions = createMissions(scene, pois);
   const hud = createHUD();
   const minimap = createMinimap(el('minimap'), city.map);
+
+  // ---------- mappa completa e navigatore ----------
+  // Clic sulla minimappa: si apre la mappa di tutta l'isola. Clic su un
+  // punto della mappa: quello diventa la destinazione e sulla minimappa
+  // compare la bandierina 📍 con la distanza (il navigatore).
+  const nav = { x: 0, z: 0, on: false };
+  const bigmap = createBigMap(city.map, () => ({
+    player, missions, barber, dealer, traffic, bikes: freeBikes, nav, pads: garagePads,
+    marks: heists.spots.concat([
+      { x: hospital.spawn.x, z: hospital.spawn.z, icon: '🏥' },
+      { x: workshop.pos.x, z: workshop.pos.z, icon: '🔧' }
+    ])
+  }), (wx, wz) => {
+    if (wx === null) { // dal pulsante "togli il navigatore"
+      if (nav.on) { nav.on = false; hud.toast(tr('nav_clear')); }
+      bigmap.draw();
+      return;
+    }
+    nav.x = wx; nav.z = wz; nav.on = true;
+    bigmap.close();
+    hud.toast(tr('nav_set'));
+    sfx.pickup();
+  });
+  el('minimap').addEventListener('click', () => {
+    if (uiState === 'playing') bigmap.open();
+  });
 
   // ---------- rapine e polizia ----------
   const heists = createHeists(scene, colliders);
@@ -611,6 +638,7 @@ async function init () {
   }
   el('d-done').addEventListener('click', closeDealer);
   window.addEventListener('keydown', (e) => {
+    if (e.code === 'Escape' && bigmap.isOpen()) bigmap.close();
     if (e.code === 'Escape' && uiState === 'dealer') closeDealer();
     if (e.code === 'Escape' && uiState === 'talking') talk.close();
   });
@@ -734,6 +762,8 @@ async function init () {
     updateCity(dt);
 
     if (uiState === 'playing') {
+      // mappa completa: si apre con M (o cliccando la minimappa)
+      if (consumePress('KeyM')) bigmap.open();
       if (consumePress('KeyE')) {
         if (player.mode === 'drive' && player.carPos.distanceTo(workshop.repairPos) < 4.5 &&
             (player.carDamage || 0) > 0.01) {
@@ -893,6 +923,13 @@ async function init () {
       updateMissions(missions, dt, playerPos, hud, sfx);
       hud.updateToast(dt);
 
+      // ----- navigatore: arrivati a destinazione? -----
+      if (nav.on && Math.hypot(playerPos.x - nav.x, playerPos.z - nav.z) < 8) {
+        nav.on = false;
+        hud.toast(tr('nav_arrived'));
+        sfx.coin();
+      }
+
       // ----- rapina in corso: resta vicino alla porta per 4 secondi -----
       if (robbery) {
         const s = robbery.spot;
@@ -1038,6 +1075,7 @@ async function init () {
       minimap.update({
         player, car, missions, barber, dealer, traffic, coins,
         bikes: freeBikes, // bici da prendere in giro
+        nav, // la destinazione del navigatore (se accesa)
         heists: heists.spots.concat([
           { x: hospital.spawn.x, z: hospital.spawn.z, icon: '🏥' },
           { x: workshop.pos.x, z: workshop.pos.z, icon: '🔧' }

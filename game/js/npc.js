@@ -2,8 +2,12 @@
 // Se un'auto gli passa addosso veloce, volano in ragdoll alla cartoon, restano
 // a terra 3 secondi e poi si rialzano con la clip "Getting Up".
 import * as THREE from 'three';
-import { resolveCollisions, resolveCircles } from './city.js';
+import { resolveCollisions, resolveCircles, CITY_SIZE } from './city.js';
 import { randomAvatarConfig, applyAvatar, applyBody, animateRig } from './avatar.js';
+
+// i passanti restano in città e sulla spiaggia: sulle colline non hanno
+// nulla da fare (e il terreno lì non seguirebbe le loro gambe)
+const NPC_LIM = CITY_SIZE / 2 + 12;
 
 export function createNPCs (scene, count, colliders, pois, ericFactory) {
   const npcs = [];
@@ -103,6 +107,12 @@ export function updateNPCs (npcs, dt, colliders, carCircles, playerPos, playerCa
       n.pos.x += Math.sin(n.yaw) * n.speed * dt;
       n.pos.z += Math.cos(n.yaw) * n.speed * dt;
       resolveCollisions(n.pos, 0.5, colliders);
+      // se il passo ci porta fuori dalla spiaggia, ci si ripensa la rotta
+      if (Math.abs(n.pos.x) > NPC_LIM || Math.abs(n.pos.z) > NPC_LIM) {
+        n.pos.x = Math.max(-NPC_LIM, Math.min(NPC_LIM, n.pos.x));
+        n.pos.z = Math.max(-NPC_LIM, Math.min(NPC_LIM, n.pos.z));
+        n.yaw += Math.PI;
+      }
       // il giocatore spinge i personaggi di lato (niente compenetrazioni)
       if (playerPos) resolveCircles(n.pos, 0.45, [{ x: playerPos.x, z: playerPos.z, r: 0.5 }]);
       // le auto: piano le spingono, veloci li fanno volare in ragdoll

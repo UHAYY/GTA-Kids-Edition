@@ -13,7 +13,7 @@ export function createMinimap (canvasEl, map) {
   const sy = (wz, pz) => (wz - pz) * SCALE + R;
 
   function update (state) {
-    const { player, missions, barber, dealer, traffic, coins, heists, pads, bikes } = state;
+    const { player, missions, barber, dealer, traffic, coins, heists, pads, bikes, nav } = state;
     const driving = player.mode === 'drive';
     const p = driving ? player.carPos : player.pos;
     const heading = driving ? player.heading : player.yaw;
@@ -98,6 +98,30 @@ export function createMinimap (canvasEl, map) {
         ctx.fillText('P', px2, py2 + 1);
         ctx.font = '13px serif';
       }
+    }
+
+    // navigatore: la bandierina della destinazione scelta sulla mappa.
+    // Vicina si vede dov'è; lontana si aggancia al bordo della minimappa
+    if (nav && nav.on) {
+      const dx = nav.x - p.x;
+      const dz = nav.z - p.z;
+      const dist = Math.hypot(dx, dz);
+      let mx = sx(nav.x, p.x);
+      let my = sy(nav.z, p.z);
+      if (dist > (R - 13) / SCALE) {
+        mx = R + (dx / dist) * (R - 13);
+        my = R + (dz / dist) * (R - 13);
+      }
+      ctx.font = 'bold 15px serif';
+      ctx.fillText('📍', mx, my + 1);
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      const label = dist > 1000 ? (dist / 1000).toFixed(1) + 'km' : Math.round(dist / 10) * 10 + 'm';
+      ctx.strokeText(label, mx, my - 8);
+      ctx.fillText(label, mx, my - 8);
+      ctx.font = '13px serif';
     }
 
     // obiettivo della missione: stella, ancorata al bordo se è lontana

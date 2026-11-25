@@ -42,6 +42,57 @@ function scaleUV (geo, su, sv) {
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
 }
 
+// ---------- quota del terreno fuori città ----------
+// L'isola continua oltre la spiaggia: prima colline verdi dolci, poi
+// montagne rocciose con le cime innevate, infine un anello di montagne
+// tampone e la discesa sotto il mare. Una sola funzione per tutti: la
+// usano la mesh del terreno, la fisica (surfaceY) e la minimappa.
+// Nota: dentro la città (r < 218) vale -0.06, un pelo sotto il prato e
+// la sabbia che lo coprono: così non si vede né sfrega (z-fighting).
+export function terrainHeight (x, z) {
+  const r = Math.max(Math.abs(x), Math.abs(z)); // distanza "a quadri", come la città
+  if (r < 218) return -0.06;
+  // salita dolce dal livello del mare: tutte le quote crescono con t,
+  // così alla frontina (r = 218) il terreno parte da zero senza scarpate
+  const t = Math.min(1, (r - 218) / 60);
+  let h = t * 9;
+  // colline: due ottave di "rumore" liscio fatto con seni e coseni
+  const n1 = Math.sin(x * 0.023 + Math.sin(z * 0.031) * 2) *
+             Math.cos(z * 0.026 + Math.sin(x * 0.019) * 2.3);
+  h += (0.5 + 0.5 * n1) * (8 + 14 * t) * t;
+  // montagne: creste alongate che spuntano oltre i 340 m dal centro
+  const m = Math.max(0, Math.min(1, (r - 340) / 130));
+  const ridge = 1 - Math.abs(Math.sin(x * 0.011 + 2 * Math.sin(z * 0.008)));
+  const n2 = 0.5 + 0.5 * Math.sin(x * 0.043 + Math.sin(z * 0.037) * 1.8) *
+                     Math.cos(z * 0.041 + Math.sin(x * 0.033) * 1.6);
+  h += Math.pow(ridge, 2.6) * (40 + 38 * n2) * m;
+  // anello finale di montagne-tampone: l'isola finisce in muraglia…
+  const rim = Math.max(0, Math.min(1, (r - 460) / 100));
+  h += rim * rim * 30;
+  // …che poi crolla nel mare oltre i 560 m dal centro
+  const edge = Math.max(0, (r - 560) / 50);
+  h -= edge * edge * 80;
+  return h;
+}
+
+// colore del terreno a una certa quota (sabbia → prato → roccia → neve),
+// con un po' di variazione a seconda del posto: lo usano i vertici della
+// mesh e i pixel della mappa della minimappa
+const TER_SAND = new THREE.Color(0xede2ae);
+const TER_GRASS = new THREE.Color(0x8fce7a);
+const TER_GRASS2 = new THREE.Color(0x6fae5a);
+const TER_ROCK = new THREE.Color(0x9a8f7d);
+const TER_SNOW = new THREE.Color(0xf4f8fb);
+const _tc = new THREE.Color();
+export function terrainColorAt (h, x, z, out = _tc) {
+  if (h < 0.4) return out.copy(TER_SAND);
+  const varz = 0.5 + 0.5 * Math.sin(x * 0.09) * Math.cos(z * 0.083); // chiazze
+  out.copy(TER_GRASS).lerp(TER_GRASS2, varz * 0.7);
+  if (h > 20) out.lerp(TER_ROCK, Math.min(1, (h - 20) / 14));
+  if (h > 48) out.lerp(TER_SNOW, Math.min(1, (h - 48) / 14));
+  return out;
+}
+
 export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   const colliders = []; // { minX, maxX, minZ, maxZ }
   const pois = [];      // punti dove nascono missioni e monete
@@ -89,8 +140,9 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   }
 
   // prato di base (con i buchi dove stanno gli ingressi dei garage
-  // sotterranei: così dalla strada si vede la discesa)
-  const G = (CITY_SIZE + 160) / 2;
+  // sotterranei: così dalla strada si vede la discesa). Basta un pelo di
+  // più della spiaggia: oltre, c'è il terreno a rilievi che si alza
+  const G = HALF + 30;
   const groundShape = new THREE.Shape();
   groundShape.moveTo(-G, -G);
   groundShape.lineTo(G, -G);
@@ -229,46 +281,28 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   addSea(DEEP, seaEdge * 2, seaTexEW, seaEdge + DEEP / 2, 0);   // est
   addSea(DEEP, seaEdge * 2, seaTexEW, -seaEdge - DEEP / 2, 0);  // ovest
 
-  // ---------- rilievi: colline e montagne tutt'intorno ----------
-  // Oltre la spiaggia, dal mare affiora un anello di rilievi (come la costa
-  // che sta di fronte alla città): colline verdi arrotondate e montagne
-  // rocciose con le cime innevate. Le quattro colline agli angoli della
-  // spiaggia sono vicine e si possono raggiungere a piedi (con collider).
-  // Tutto va in batch: tre soli mesh per prato, roccia e neve.
-  const hillMat = new THREE.MeshLambertMaterial({ color: 0x67a851 });
-  const hillDarkMat = new THREE.MeshLambertMaterial({ color: 0x4f8f45 });
-  const rockMat = new THREE.MeshLambertMaterial({ color: 0x8d8578 });
-  const snowMat = new THREE.MeshLambertMaterial({ color: 0xf4f8fb });
-
-  function addHill (x, z, r, h, mat, solido) {
-    const geo = new THREE.ConeGeometry(r, h, 7 + Math.floor(Math.random() * 4));
-    geo.rotateY(Math.random() * Math.PI); // spigoli a caso: silhouette diverse
-    put(geo, mat, x, h / 2 - 2.5, z, { cast: true, receive: true });
-    if (solido) colliders.push({ minX: x - r * 0.75, maxX: x + r * 0.75, minZ: z - r * 0.75, maxZ: z + r * 0.75 });
-    if (x + r < HALF + 80) mapHills.push({ x, z, r }); // se sta nella minimappa
-  }
-  const mapHills = [];
-
-  function addMountain (x, z, r, h) {
-    put(new THREE.ConeGeometry(r, h, 8), rockMat, x, h / 2 - 3, z, { cast: true });
-    if (h > 75) {
-      // cima innevata: un cono bianco che avvolge la punta
-      put(new THREE.ConeGeometry(r * 0.31, h * 0.3, 8), snowMat, x, h * 0.85 - 3, z, { cast: true });
+  // ---------- la mesh del terreno (colline e montagne) ----------
+  // Un grande piano sconnesso dai vertici colorati secondo la quota:
+  // un'unica mesh per tutta l'isola, un solo draw call.
+  const TER_SIZE = 1240;
+  const terGeo = new THREE.PlaneGeometry(TER_SIZE, TER_SIZE, 124, 124);
+  terGeo.rotateX(-HPI);
+  {
+    const p = terGeo.attributes.position;
+    const colors = new Float32Array(p.count * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < p.count; i++) {
+      const h = terrainHeight(p.getX(i), p.getZ(i));
+      p.setY(i, h);
+      terrainColorAt(h, p.getX(i), p.getZ(i), c);
+      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
     }
+    terGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    terGeo.computeVertexNormals();
   }
-
-  for (let k = 0; k < 26; k++) {
-    const a = (k / 26) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
-    const dist = 250 + Math.random() * 250; // tra la spiaggia e la nebbia
-    const x = Math.cos(a) * dist;
-    const z = Math.sin(a) * dist;
-    if (Math.random() < 0.45) addMountain(x, z, 26 + Math.random() * 34, 60 + Math.random() * 70);
-    else addHill(x, z, 20 + Math.random() * 24, 12 + Math.random() * 22, k % 2 ? hillMat : hillDarkMat, false);
-  }
-  // le quattro colline sugli angoli della spiaggia: vicino e tutto verde
-  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-    addHill(sx * 208, sz * 208, 11 + Math.random() * 4, 7 + Math.random() * 5, hillMat, true);
-  }
+  const terrain = new THREE.Mesh(terGeo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  terrain.receiveShadow = true;
+  scene.add(terrain);
 
 
   // centri delle strade (verticali e orizzontali)
@@ -716,19 +750,34 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   flushBatches();
 
   // ---------- mappa statica per la minimappa ----------
-  // una sola immagine grande con mare, spiaggia, prato, strade, parchi ed
-  // edifici: la minimappa ne mostra ogni frame solo la parte attorno al
-  // giocatore (drawImage), così costa pochissimo
-  const mapS = 2;                 // pixel di mappa per metro
-  const mapOff = HALF + 80;       // margine di mare oltre il bordo città
+  // una sola immagine grande con mare, rilievi, spiaggia, prato, strade,
+  // parchi ed edifici: la minimappa ne mostra ogni frame solo la parte
+  // attorno al giocatore (drawImage), così costa pochissimo. La mappa
+  // copre tutta l'isola (anche le colline e le montagne).
+  const mapS = 1.5;           // pixel di mappa per metro
+  const mapOff = 620;         // mezzo lato coperto dalla mappa
   const mapCanvas = document.createElement('canvas');
   mapCanvas.width = mapCanvas.height = mapOff * 2 * mapS;
   {
     const g = mapCanvas.getContext('2d');
     const M = (v) => (v + mapOff) * mapS; // metro -> pixel di mappa
-    // mare, spiaggia, prato
+    // mare
     g.fillStyle = '#3f97e8';
     g.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+    // rilievi: una griglia di quadretti colorati secondo la quota
+    // (la funzione è liscia: a passi da 4 metri la mappa resta fedele)
+    const step = 4;
+    const c = new THREE.Color();
+    for (let wx = -mapOff; wx < mapOff; wx += step) {
+      for (let wz = -mapOff; wz < mapOff; wz += step) {
+        const h = terrainHeight(wx, wz);
+        if (h < 0.1) continue; // sotto il livello del mare: resta mare
+        terrainColorAt(h, wx, wz, c);
+        g.fillStyle = c.getStyle();
+        g.fillRect(M(wx), M(wz), step * mapS + 1, step * mapS + 1);
+      }
+    }
+    // spiaggia, prato
     g.fillStyle = '#ede2ae';
     g.fillRect(M(-HALF - 26), M(-HALF - 26), (HALF + 26) * 2 * mapS, (HALF + 26) * 2 * mapS);
     g.fillStyle = '#8fce7a';
@@ -747,13 +796,6 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
       const cx = -HALF + ROAD + i * CELL + BLOCK / 2;
       const cz = -HALF + ROAD + j * CELL + BLOCK / 2;
       g.fillRect(M(cx - (BLOCK - 4) / 2), M(cz - (BLOCK - 4) / 2), (BLOCK - 4) * mapS, (BLOCK - 4) * mapS);
-    }
-    // colline (cerchi verdi scuri)
-    g.fillStyle = '#4f8f45';
-    for (const h of mapHills) {
-      g.beginPath();
-      g.arc(M(h.x), M(h.z), h.r * mapS, 0, 7);
-      g.fill();
     }
     // edifici
     g.fillStyle = '#646e78';
@@ -831,9 +873,10 @@ export function resolveCollisions (pos, radius, colliders) {
     }
   }
 
-  // bordi della città: si può camminare sulla spiaggia (26 m) e fare
-  // due passi nell'acqua bassa, ma non arrivare in mezzo al mare
-  const lim = HALF + 28;
+  // bordi dell'isola: la città e la spiaggia sono aperte, ma oltre le
+  // colline e le montagne arriva il mare: questo muro invisibile ferma
+  // chi cerca di andarsene a nuoto (il terreno lì è già ripido e verde)
+  const lim = 520;
   if (pos.x < -lim) { pos.x = -lim; normal = { x: 1, z: 0 }; }
   if (pos.x > lim) { pos.x = lim; normal = { x: -1, z: 0 }; }
   if (pos.z < -lim) { pos.z = -lim; normal = { x: 0, z: 1 }; }
