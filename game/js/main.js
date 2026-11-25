@@ -306,9 +306,11 @@ async function init () {
   }
 
   const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
-  const talk = createTalk({ npcs, player, camera, promptEl: null });
   // pedoni sulle strisce: aspettano il rosso e attraversano
   const crossers = createCrossers(scene, roadCenters, lights, lightPhase, colliders, assets.createEric, 14);
+  // con loro si può parlare anche T: sono passanti come gli altri
+  const talkers = npcs.concat(crossers.crossers);
+  const talk = createTalk({ npcs: talkers, player, camera, promptEl: null });
   // le auto del traffico nascono lontane dal giocatore e dalla sua auto
   const traffic = createTraffic(scene, roadCenters, assets.carPrefabs, playerCarPrefab, 10,
     [{ x: player.pos.x, z: player.pos.z }, { x: 24, z: 30 }]);
@@ -897,10 +899,11 @@ async function init () {
         // una bici lasciata in giro (si prende con E!)
         const nearFreeBike = freeBikes.find(b =>
           Math.hypot(b.position.x - player.pos.x, b.position.z - player.pos.z) < 2.6);
-        // il passante più vicino: se c'è, il prompt è "premi T per parlare"
+        // il passante più vicino (anche sui passanti delle strisce): se
+        // c'è, il prompt è "premi T per parlare"
         let nearNpc = null;
         let npcDist = 3.2;
-        for (const n of npcs) {
+        for (const n of talkers) {
           if (n.rd) continue;
           const d = Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
           if (d < npcDist) { npcDist = d; nearNpc = n; }

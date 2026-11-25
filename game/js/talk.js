@@ -93,10 +93,16 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
   }
 
   // ---------- voce dell'NPC (sintesi vocale di sistema) ----------
+  // Le emoji non si dicono a voce: la sintesi le leggerrebbe ("faccina che
+  // ride…" al posto di parlare), quindi vengono tolte dal testo parlato
+  // (restano nel fumetto e nel log).
+  const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2190}-\u{2BFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\u{20E3}]/gu;
+
   function say (text) {
     try {
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
+      const u = new SpeechSynthesisUtterance(text.replace(EMOJI_RE, ' ').replace(/ {2,}/g, ' ').trim());
+      if (!u.text) return; // niente da dire (solo emoji): si resta in ascolto
       u.lang = locale();
       u.rate = 1.02;
       u.pitch = 1.05;

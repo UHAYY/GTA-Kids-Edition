@@ -111,6 +111,11 @@ export function createCrossers (scene, roadCenters, lights, lightPhase, collider
           c.speed = WALK * (0.95 + Math.random() * 0.2);
         }
       } else if (c.state === 'cross') {
+        // il ragdoll azzera la velocità (updateRagdoll) e voltano lo sguardo
+        // verso il volo: chi era attraversando riparte con il passo e la
+        // faccia nella direzione giusta, altrimenti cammina sul posto
+        if (c.speed < WALK * 0.5) c.speed = WALK * (0.95 + Math.random() * 0.2);
+        setYaw(c);
         // il verde tornato mentre sei sulla strada? SCATTO!
         const scatto = c.cr.light && phase !== 2;
         const v = c.speed * (scatto ? 1.9 : 1);
