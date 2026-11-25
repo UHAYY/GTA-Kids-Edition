@@ -184,6 +184,41 @@ async function init () {
   // quando ne cambi di nuovo.
   const parkedCars = [];
 
+  // parcheggia un veicolo lasciato in giro: lo porta accanto al marciapiede
+  // (fuori dalle corsie) e lo allinea alla strada. Senza questo l'auto
+  // abbandonata resta in mezzo alla corsia e il traffico, che non la vede,
+  // ci passa attraverso compenetrandosi (l'autobus pieno di auto!).
+  function curbPark (model) {
+    if ((model.position.y || 0) > 0.5) return; // sospeso (rampa/garage): no
+    const x = model.position.x, z = model.position.z;
+    // la strada più vicina: centro della linea verticale (x fisso) o
+    // orizzontale (z fisso) più vicino al veicolo
+    let road = null, dist = Infinity;
+    for (const rc of roadCenters) {
+      const dx = Math.abs(x - rc), dz = Math.abs(z - rc);
+      if (dx < dist) { dist = dx; road = { axis: 'x', c: rc }; }
+      if (dz < dist) { dist = dz; road = { axis: 'z', c: rc }; }
+    }
+    if (!road || dist > 7) return; // fuori strada: resta dov'è
+    const h = model.rotation.y;
+    if (road.axis === 'x') {
+      // strada verticale: parcheggia dal lato in cui si trova già
+      const side = x >= road.c ? 1 : -1;
+      model.position.x = road.c + side * 4.3; // tra corsia (1.7) e marciapiede (6)
+      // e fuori dall'incrocio più vicino (è largo 12 m)
+      const zc = roadCenters.reduce((a, b) => Math.abs(b - z) < Math.abs(a - z) ? b : a);
+      if (Math.abs(z - zc) < 7.5) model.position.z = zc + Math.sign(z - zc || 1) * 7.5;
+      // il muso guarda lungo la strada (senso di marcia di prima)
+      model.rotation.y = Math.cos(h) >= 0 ? 0 : Math.PI;
+    } else {
+      const side = z >= road.c ? 1 : -1;
+      model.position.z = road.c + side * 4.3;
+      const xc = roadCenters.reduce((a, b) => Math.abs(b - x) < Math.abs(a - x) ? b : a);
+      if (Math.abs(x - xc) < 7.5) model.position.x = xc + Math.sign(x - xc || 1) * 7.5;
+      model.rotation.y = Math.sin(h) >= 0 ? Math.PI / 2 : -Math.PI / 2;
+    }
+  }
+
   // cambia (o compra) un veicolo: il modello si sostituisce dove sei
   function switchCar (i) {
     const model = SHOP[i].prefab.clone();
@@ -194,7 +229,7 @@ async function init () {
     // pronto per essere ripreso con E
     if (player.car) {
       if (player.car.userData.shopIndex !== undefined) scene.remove(player.car);
-      else parkedCars.push(player.car);
+      else { curbPark(player.car); parkedCars.push(player.car); }
     }
     model.userData.topSpeed = SHOP[i].topSpeed; // serve anche alle auto rubate
     player.car = model;
@@ -223,6 +258,7 @@ async function init () {
   // prendi un'auto (rubata al traffico o parcheggiata): la tua auto di ora
   // resta in scena dove sta, pronta per essere ripresa dopo
   function takeCar (model, stolen) {
+    curbPark(player.car); // la vecchia auto non resta in mezzo alla corsia
     parkedCars.push(player.car);
     model.userData.carDamage = model.userData.carDamage || 0;
     attachCar(player, model, model.position.clone(), model.rotation.y);
@@ -835,7 +871,14 @@ async function init () {
             // compri un'auto, la vecchia variabile "car" non è più in scena
             const res = tryEnterExit(player, player.car);
             if (res === 'entered') { sfx.door(); hud.speed.classList.remove('hidden'); hud.prompt.classList.add('hidden'); }
-            if (res === 'exited') { sfx.door(); hud.speed.classList.add('hidden'); }
+            if (res === 'exited') {
+              sfx.door(); hud.speed.classList.add('hidden');
+              // l'auto lasciata va accanto al marciapiede (non in corsia);
+              // tu resti allo stesso posto, a lato dell'auto dove ora sta
+              const lato = player.pos.clone().sub(player.car.position);
+              curbPark(player.car);
+              player.pos.copy(player.car.position).add(lato);
+            }
           }
         }
       }
