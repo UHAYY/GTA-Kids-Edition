@@ -118,6 +118,91 @@ export function townMix (x, z) {
   return m;
 }
 
+// ---------- strade di montagna per i paesini ----------
+// Una strada asfaltata per ogni paesino: parte dall'ultimo incrocio della
+// città e sale dolcemente su per il colle fino alla terrazza. Il terreno
+// lungo il corridoio si appiattisce sul profilo della strada (in
+// terrainHeight): lo vedono uguale la mesh, l'auto e la minimappa.
+export const MOUNT_ROAD_W = 9; // larghezza dell'asfalto
+const MOUNT_FADE = 18;         // larghezza della transizione nei prati ai lati
+const MOUNT_STEP = 5;          // metri fra un punto e l'altro del profilo
+
+// percorsi (dall'ultimo incrocio della città al centro del paese): curve
+// a S da passo di montagna, così la salita è lunga e dolce e non ci sono
+// muri di pendenza
+const MOUNT_PATHS = [
+  // verso Collinetta Fiorita (est)
+  [[190, -138], [205, -115], [225, -160], [245, -115], [265, -162], [280, -125], [293, -150], [295, -150]],
+  // verso Villaggio del Sole (sud-ovest)
+  [[-190, 138], [-200, 162], [-222, 180], [-238, 210], [-220, 238], [-244, 254], [-250, 270]],
+  // verso Rifugio della Neve (nord)
+  [[-138, -190], [-116, -214], [-140, -242], [-118, -270], [-146, -298], [-172, -315], [-210, -330]]
+];
+
+export const MOUNT_ROADS = MOUNT_PATHS.map((path, ri) => {
+  // campiona il percorso ogni MOUNT_STEP metri
+  const xs = [], zs = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const [ax, az] = path[i], [bx, bz] = path[i + 1];
+    const n = Math.max(1, Math.round(Math.hypot(bx - ax, bz - az) / MOUNT_STEP));
+    for (let k = 0; k < n; k++) {
+      xs.push(ax + (bx - ax) * k / n);
+      zs.push(az + (bz - az) * k / n);
+    }
+  }
+  xs.push(path[path.length - 1][0]);
+  zs.push(path[path.length - 1][1]);
+
+  // profilo: il rilievo di mezzo viene lisciato, con le due teste
+  // bloccate (in città si parte da 0, nel paese si arriva alla terrazza)
+  const ys = xs.map((x, i) => rawHeight(x, zs[i]));
+  ys[ys.length - 1] = MINI_TOWNS[ri].h;
+  for (let pass = 0; pass < 8; pass++) {
+    for (let i = 1; i < ys.length - 1; i++) {
+      ys[i] = (ys[i - 1] + ys[i] * 2 + ys[i + 1]) / 4;
+    }
+  }
+  // e come nelle strade vere la pendenza ha un tetto (22%, un bel passo
+  // di montagna): dove il colle è più ripido la strada taglia lo sterro
+  // o si alza sul ponte, punto per punto, avanti e indietro
+  const MAXG = 0.22;
+  const stepMax = MAXG * MOUNT_STEP;
+  for (let pass = 0; pass < 4; pass++) {
+    for (let i = 1; i < ys.length; i++) {
+      ys[i] = Math.max(ys[i - 1] - stepMax, Math.min(ys[i - 1] + stepMax, ys[i]));
+    }
+    for (let i = ys.length - 2; i >= 1; i--) {
+      ys[i] = Math.max(ys[i + 1] - stepMax, Math.min(ys[i + 1] + stepMax, ys[i]));
+    }
+  }
+
+  // rettangolo che la contiene (allargato): chi è fuori non la controlla
+  const pad = MOUNT_ROAD_W / 2 + MOUNT_FADE + 1;
+  return {
+    xs, ys, zs,
+    minX: Math.min(...xs) - pad, maxX: Math.max(...xs) + pad,
+    minZ: Math.min(...zs) - pad, maxZ: Math.max(...zs) + pad
+  };
+});
+
+// punto della strada di montagna più vicina: { d, y } o null se lontani
+function nearestMountRoad (x, z) {
+  let best = null;
+  for (const r of MOUNT_ROADS) {
+    if (x < r.minX || x > r.maxX || z < r.minZ || z > r.maxZ) continue;
+    for (let i = 0; i < r.xs.length - 1; i++) {
+      const ax = r.xs[i], az = r.zs[i], ay = r.ys[i];
+      const bx = r.xs[i + 1], bz = r.zs[i + 1], by = r.ys[i + 1];
+      const dx = bx - ax, dz = bz - az;
+      const l2 = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2));
+      const d = Math.hypot(x - (ax + dx * t), z - (az + dz * t));
+      if (!best || d < best.d) best = { d, y: ay + (by - ay) * t };
+    }
+  }
+  return best;
+}
+
 export function terrainHeight (x, z) {
   let h = rawHeight(x, z);
   // le terrazze dei paesini: dentro il paese il terreno vale t.h,
@@ -128,6 +213,14 @@ export function terrainHeight (x, z) {
     const k = Math.min(1, (t.r + TOWN_FADE - d) / TOWN_FADE);
     const s = k * k * (3 - 2 * k); // smoothstep: pendenza zero ai bordi
     h += (t.h - h) * s;
+  }
+  // le strade di montagna: sull'asfalto il terreno segue il loro profilo
+  // dolce (chi guida non trova buche), ai lati torna il colle
+  const q = nearestMountRoad(x, z);
+  if (q && q.d < MOUNT_ROAD_W / 2 + MOUNT_FADE) {
+    const k = Math.max(0, Math.min(1, 1 - (q.d - MOUNT_ROAD_W / 2) / MOUNT_FADE));
+    const s = k * k * (3 - 2 * k);
+    h += (q.y - h) * s;
   }
   return h;
 }
@@ -345,9 +438,10 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
   // Un grande piano sconnesso dai vertici colorati secondo la quota:
   // un'unica mesh per tutta l'isola, un solo draw call.
   const TER_SIZE = 1240;
-  // 168 suddivisioni (non 124): le terrazze dei paesini hanno bisogno di
-  // vertici più fitti per seguire le scarpate dolci senza spigoli
-  const terGeo = new THREE.PlaneGeometry(TER_SIZE, TER_SIZE, 168, 168);
+  // 232 suddivisioni (non 124): le terrazze dei paesini e le strade di
+  // montagna hanno bisogno di vertici fitti per seguire scarpate e sterri
+  // senza seppellire l'asfalto
+  const terGeo = new THREE.PlaneGeometry(TER_SIZE, TER_SIZE, 232, 232);
   terGeo.rotateX(-HPI);
   {
     const p = terGeo.attributes.position;
@@ -773,6 +867,43 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     return new THREE.MeshLambertMaterial({ map: tex });
   };
 
+  // ---------- strade di montagna ----------
+  // Nastro di asfalto costruito a mano: vertici a sinistra e destra di ogni
+  // punto del profilo, così la strada si piega col rilievo (i piani dritti
+  // non bastano). everySeg salta un segmento su due: servono per le linee.
+  function mountRibbon (r, width, yOff, everySeg) {
+    const pos = [], idx = [];
+    const n = r.xs.length;
+    for (let i = 0; i < n; i++) {
+      // direzione media nel punto (differenze centrali): la perpendicolare
+      // dà i due bordi del nastro
+      const dx = r.xs[Math.min(i + 1, n - 1)] - r.xs[Math.max(i - 1, 0)];
+      const dz = r.zs[Math.min(i + 1, n - 1)] - r.zs[Math.max(i - 1, 0)];
+      const l = Math.hypot(dx, dz) || 1;
+      const px = -dz / l * width / 2, pz = dx / l * width / 2;
+      pos.push(r.xs[i] + px, r.ys[i] + yOff, r.zs[i] + pz);
+      pos.push(r.xs[i] - px, r.ys[i] + yOff, r.zs[i] - pz);
+    }
+    for (let i = 0; i < n - 1; i++) {
+      if (everySeg && i % 2) continue; // linea tratteggiata: un segmento sì…
+      const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+      // senso antiorario visto dall'alto: le facce guardano in su
+      idx.push(a, c, b, b, c, d);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    return geo;
+  }
+  const mountDashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+  for (const r of MOUNT_ROADS) {
+    const asf = new THREE.Mesh(mountRibbon(r, MOUNT_ROAD_W, 0.07), roadMat);
+    asf.receiveShadow = true;
+    scene.add(asf);
+    scene.add(new THREE.Mesh(mountRibbon(r, 0.3, 0.12, true), mountDashMat));
+  }
+
   for (const t of MINI_TOWNS) {
     const y = t.h;
     const R = t.r;
@@ -959,6 +1090,16 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     for (const t of MINI_TOWNS) {
       g.fillRect(M(t.x - t.r), M(t.z - TOWN_ROAD / 2), t.r * 2 * mapS, TOWN_ROAD * mapS);
       g.fillRect(M(t.x - TOWN_ROAD / 2), M(t.z - t.r), TOWN_ROAD * mapS, t.r * 2 * mapS);
+    }
+    // strade di montagna che portano ai paesini
+    g.strokeStyle = '#5f6a72';
+    g.lineWidth = MOUNT_ROAD_W * mapS;
+    g.lineJoin = 'round';
+    for (const r of MOUNT_ROADS) {
+      g.beginPath();
+      g.moveTo(M(r.xs[0]), M(r.zs[0]));
+      for (let i = 1; i < r.xs.length; i++) g.lineTo(M(r.xs[i]), M(r.zs[i]));
+      g.stroke();
     }
     // parchi
     g.fillStyle = '#7ec850';

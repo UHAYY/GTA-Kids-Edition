@@ -1,6 +1,6 @@
 // Il giocatore: avatar rigged (FBX) a piedi + guida dell'auto (fisica arcade)
 import * as THREE from 'three';
-import { resolveCollisions, resolveCircles } from './city.js';
+import { resolveCollisions, resolveCircles, terrainHeight } from './city.js';
 import { surfaceY } from './garage.js';
 import { pressed, consumePress } from './input.js';
 import { applyAvatar, applyBody, animateRig } from './avatar.js';
@@ -39,6 +39,7 @@ export function createPlayer (scene, startPos, ericFactory, cfg) {
     carDamage: 0, // 0 = integra, 0.6 = molto rovinata: ogni scontro la rallenta
     under: 0, // 1 = sei dentro un garage sotterraneo (per la quota del pavimento)
     vy: 0, // velocità verticale del salto
+    grade: 0, // pendenza sotto le ruote (≈ seno dell'angolo, + in salita)
     bench: null // la panchina su cui si è seduti (se c'è)
   };
   // finita l'animazione di alzata: scendi davanti alla panchina
@@ -57,6 +58,7 @@ export function attachCar (player, carGroup, startPos, heading) {
   player.carPos = startPos.clone();
   player.heading = heading;
   player.speed = 0;
+  player.grade = 0; // la nuova auto parte dritta, senza inclinazioni ereditate
   player.carDamage = 0; // un'auto appena presa (o comprata) è integra
   carGroup.position.copy(startPos);
   carGroup.rotation.y = heading;
@@ -147,6 +149,19 @@ export function updateDrive (player, dt, colliders, trafficCircles) {
   const dmg = player.carDamage || 0;
   const acc = ACCEL * (isBike ? 0.6 : 1) * (1 - dmg * 0.5);
   const cap = (player.maxSpeed || MAX_SPEED) * (1 - dmg);
+
+  // pendenza sotto le ruote: quota del terreno davanti e dietro (campione
+  // a 2,2 m, come un asse tra le due coppie di ruote). Le rampe dei garage
+  // non contano: lì l'auto resta dritta, la pendenza è quella del colle
+  const ax = Math.sin(player.heading), az = Math.cos(player.heading);
+  const yF = terrainHeight(player.carPos.x + ax * 2.2, player.carPos.z + az * 2.2);
+  const yB = terrainHeight(player.carPos.x - ax * 2.2, player.carPos.z - az * 2.2);
+  const grade = (yF - yB) / 4.4; // ≈ seno della pendenza, + in salita
+  player.grade += (grade - player.grade) * Math.min(1, dt * 8); // niente salti
+
+  // fisica della pendenza: in salita la gravità toglie velocità (l'auto
+  // "fatica"), in discesa ne regala e scende da sola col motore a spillo
+  player.speed -= player.grade * 9 * dt;
 
   if (throttle > 0) player.speed += acc * dt;
   else if (throttle < 0) player.speed -= (player.speed > 0 ? BRAKE : acc * 0.7) * dt;
@@ -254,6 +269,13 @@ export function syncBikeRider (player, dt) {
 
 // Sincronizza la mesh dell'auto con la fisica (anche la quota: garage!)
 export function syncCarVisual (player, dt) {
-  player.car.position.set(player.carPos.x, player.carPos.y || 0, player.carPos.z);
-  player.car.rotation.y = player.heading;
+  const car = player.car;
+  car.position.set(player.carPos.x, player.carPos.y || 0, player.carPos.z);
+  // prima guarda dove va (yaw), poi si inclina (pitch): serve l'ordine YXZ
+  if (car.rotation.order !== 'YXZ') car.rotation.order = 'YXZ';
+  car.rotation.y = player.heading;
+  // in pendenza l'auto si inclina come le montagne russe: in salita il
+  // muso sale (gradi positivi → pitch negativo), in discesa affonda
+  const target = -Math.atan(player.grade || 0);
+  car.rotation.x += (target - car.rotation.x) * Math.min(1, (dt || 0.016) * 7);
 }
