@@ -2,7 +2,7 @@
 // Se un'auto gli passa addosso veloce, volano in ragdoll alla cartoon, restano
 // a terra 3 secondi e poi si rialzano con la clip "Getting Up".
 import * as THREE from 'three';
-import { resolveCollisions, resolveCircles, CITY_SIZE } from './city.js';
+import { resolveCollisions, resolveCircles, CITY_SIZE, MINI_TOWNS } from './city.js';
 import { randomAvatarConfig, applyAvatar, applyBody, animateRig } from './avatar.js';
 
 // i passanti restano in città e sulla spiaggia: sulle colline non hanno
@@ -35,6 +35,40 @@ export function createNPCs (scene, count, colliders, pois, ericFactory) {
   return npcs;
 }
 
+// Gli abitanti dei tre paesini di montagna: vivono sulla terrazza in quota,
+// passeggiano tra le casette e l'incrocio. `town` è il paese di casa: da lì
+// arrivano la quota della terrazza (piatta) e il raggio dentro cui restano.
+export function createTownsfolk (scene, colliders, ericFactory, perTown = 4) {
+  const folks = [];
+  for (const town of MINI_TOWNS) {
+    for (let i = 0; i < perTown; i++) {
+      const rig = ericFactory();
+      scene.add(rig.group);
+
+      const cfg = randomAvatarConfig();
+      applyAvatar(rig, cfg, scene);
+      applyBody(rig, cfg);
+
+      // un punto a caso sulla terrazza, poi fuori dalle casette
+      const a = Math.random() * Math.PI * 2;
+      const rr = Math.random() * town.r * 0.7;
+      const p = { x: town.x + Math.cos(a) * rr, z: town.z + Math.sin(a) * rr };
+      resolveCollisions(p, 0.5, colliders);
+
+      folks.push({
+        rig,
+        pos: new THREE.Vector3(p.x, town.h, p.z),
+        yaw: Math.random() * Math.PI * 2,
+        timer: 2 + Math.random() * 4,
+        speed: 1.0 + Math.random() * 1.4,
+        town, // il paese di casa: quota e confini della terrazza
+        rd: null
+      });
+    }
+  }
+  return folks;
+}
+
 // ----- ragdoll (condiviso anche con i pedoni sulle strisce) -----
 export { startRagdoll, updateRagdoll, hitByCars };
 
@@ -60,21 +94,23 @@ function startRagdoll (n, vx, vz, radialX, radialZ, onHit) {
 function updateRagdoll (n, dt, colliders) {
   const rd = n.rd;
   const rig = n.rig;
+  // la terra sotto i piedi: in paese è la terrazza in quota, non lo zero
+  const ground = n.town ? n.town.h : 0;
   if (rig.ragdollPhase === 'fly') {
     rd.vy -= 12 * dt;
     n.pos.x += rd.vx * dt;
     n.pos.z += rd.vz * dt;
-    n.pos.y = Math.max(0, n.pos.y + rd.vy * dt);
+    n.pos.y = Math.max(ground, n.pos.y + rd.vy * dt);
     rig.model.rotation.x += rd.spin * dt; // la capriola
     resolveCollisions(n.pos, 0.5, colliders); // niente voli attraverso i muri
-    if (n.pos.y <= 0 && rd.vy < -2.5) {
-      n.pos.y = 0;
+    if (n.pos.y <= ground && rd.vy < -2.5) {
+      n.pos.y = ground;
       rd.vy *= -0.35; // rimbalzino
       rd.vx *= 0.55; rd.vz *= 0.55; rd.spin *= 0.5;
-    } else if (n.pos.y <= 0) {
+    } else if (n.pos.y <= ground) {
       // atterrato: si stende a terra (la posa la dà il primo fotogramma
       // di "Getting Up"), con i piedi verso la direzione del volo
-      n.pos.y = 0;
+      n.pos.y = ground;
       rig.model.rotation.x = 0;
       rig.ragdollPhase = 'lie';
       n.yaw = Math.atan2(rd.vx, rd.vz);
@@ -107,8 +143,20 @@ export function updateNPCs (npcs, dt, colliders, carCircles, playerPos, playerCa
       n.pos.x += Math.sin(n.yaw) * n.speed * dt;
       n.pos.z += Math.cos(n.yaw) * n.speed * dt;
       resolveCollisions(n.pos, 0.5, colliders);
-      // se il passo ci porta fuori dalla spiaggia, ci si ripensa la rotta
-      if (Math.abs(n.pos.x) > NPC_LIM || Math.abs(n.pos.z) > NPC_LIM) {
+      if (n.town) {
+        // in paese si cammina sulla terrazza in quota, senza scenderla:
+        // se il passo porta verso la scarpata, ci si ripensa la rotta
+        n.pos.y = n.town.h;
+        const dxT = n.pos.x - n.town.x, dzT = n.pos.z - n.town.z;
+        const lim = n.town.r - 2;
+        if (Math.hypot(dxT, dzT) > lim) {
+          const dT = Math.hypot(dxT, dzT) || 1e-4;
+          n.pos.x = n.town.x + (dxT / dT) * lim;
+          n.pos.z = n.town.z + (dzT / dT) * lim;
+          n.yaw = Math.atan2(-dxT, -dzT) + (Math.random() - 0.5); // verso il centro
+        }
+      } else if (Math.abs(n.pos.x) > NPC_LIM || Math.abs(n.pos.z) > NPC_LIM) {
+        // se il passo ci porta fuori dalla spiaggia, ci si ripensa la rotta
         n.pos.x = Math.max(-NPC_LIM, Math.min(NPC_LIM, n.pos.x));
         n.pos.z = Math.max(-NPC_LIM, Math.min(NPC_LIM, n.pos.z));
         n.yaw += Math.PI;

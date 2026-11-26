@@ -8,7 +8,7 @@ import { initInput, consumePress, endFrame } from './input.js';
 import { buildCity, resolveCollisions, CITY_SIZE, GRID, terrainHeight, MINI_TOWNS } from './city.js';
 import { loadAssets } from './assets.js';
 import { createPlayer, attachCar, updateWalk, updateDrive, tryEnterExit, trySit, syncCarVisual, syncBikeRider, repairCar } from './player.js';
-import { createNPCs, updateNPCs } from './npc.js';
+import { createNPCs, createTownsfolk, updateNPCs } from './npc.js';
 import { createCrossers } from './crossers.js';
 import { createTraffic, updateTraffic } from './traffic.js';
 import { createMissions, startMission, updateMissions } from './missions.js';
@@ -345,7 +345,10 @@ async function init () {
     }
   }
 
-  const npcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
+  const cityNpcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
+  // gli abitanti dei tre paesini di montagna: vivono sulle terrazze in quota
+  const townsfolk = createTownsfolk(scene, colliders, assets.createEric, 4);
+  const npcs = cityNpcs.concat(townsfolk); // tutti i passanti: città + paesini
   // pedoni sulle strisce: aspettano il rosso e attraversano
   const crossers = createCrossers(scene, roadCenters, lights, lightPhase, colliders, assets.createEric, 14);
   // con loro si può parlare anche T: sono passanti come gli altri
