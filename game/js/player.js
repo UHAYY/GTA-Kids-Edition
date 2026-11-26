@@ -40,6 +40,8 @@ export function createPlayer (scene, startPos, ericFactory, cfg) {
     under: 0, // 1 = sei dentro un garage sotterraneo (per la quota del pavimento)
     vy: 0, // velocità verticale del salto
     grade: 0, // pendenza sotto le ruote (≈ seno dell'angolo, + in salita)
+    vyCar: 0, // velocità verticale dell'auto (cadute dai salti/dissesti)
+    carAir: false, // l'auto è in volo (caduta da un bordo/salto)
     bench: null // la panchina su cui si è seduti (se c'è)
   };
   // finita l'animazione di alzata: scendi davanti alla panchina
@@ -59,6 +61,8 @@ export function attachCar (player, carGroup, startPos, heading) {
   player.heading = heading;
   player.speed = 0;
   player.grade = 0; // la nuova auto parte dritta, senza inclinazioni ereditate
+  player.vyCar = 0; // e appoggiata a terra, senza cadute ereditate
+  player.carAir = false;
   player.carDamage = 0; // un'auto appena presa (o comprata) è integra
   carGroup.position.copy(startPos);
   carGroup.rotation.y = heading;
@@ -176,8 +180,36 @@ export function updateDrive (player, dt, colliders, trafficCircles) {
 
   player.carPos.x += Math.sin(player.heading) * player.speed * dt;
   player.carPos.z += Math.cos(player.heading) * player.speed * dt;
-  // la quota segue la strada o la rampa del garage sotterraneo
-  player.carPos.y = surfaceY(player, player.carPos.x, player.carPos.z);
+
+  // quota: strada e rampe dei garage si seguono da attaccate alle ruote,
+  // ma se il terreno scende di colpo (bordò da una discesa ripida!)
+  // l'auto si stacca e cade: più alta la caduta, più danno all'atterraggio
+  let bumped = false;
+  const groundY = surfaceY(player, player.carPos.x, player.carPos.z);
+  // in volo se il terreno è crollato sotto le ruote, o se stiamo già
+  // cadendo e non abbiamo ancora toccato terra (il distacco si restringe
+  // prima dell'impatto: senza il ricordo del volo l'atterraggio salterebbe!)
+  if (player.carPos.y - groundY > 0.45 || (player.carAir && player.carPos.y > groundY)) {
+    player.carAir = true;
+    // in volo: la gravità tira giù
+    player.vyCar -= GRAVITY * dt;
+    player.carPos.y += player.vyCar * dt;
+    if (player.carPos.y <= groundY) {
+      // sbam! all'atterraggio conta la velocità verticale
+      const impact = -player.vyCar;
+      player.carPos.y = groundY;
+      player.vyCar = 0;
+      if (impact > 5 && !isBike) { // sotto i ~5 m/s è solo un saltello
+        player.carDamage = Math.min(0.6, (player.carDamage || 0) + (impact - 5) * 0.035);
+        player.bumpCooldown = 0.4;
+        bumped = true;
+      }
+    }
+  } else {
+    player.carAir = false;
+    player.carPos.y = groundY; // ruote a terra: sale e scende col colle
+    player.vyCar = 0;
+  }
 
   // collisioni con due cerchi (davanti e dietro): edifici e altre auto
   let hit = null;
@@ -200,12 +232,13 @@ export function updateDrive (player, dt, colliders, trafficCircles) {
   }
 
   if (player.bumpCooldown > 0) player.bumpCooldown -= dt;
-  let bumped = false;
-  if (hit && Math.abs(player.speed) > 3 && player.bumpCooldown <= 0) {
-    player.speed *= 0.4; // tonfo morbido
-    // ogni scontro rovina l'auto: consuma velocità massima e accelerazione
-    // (le bici non si rovinano: al massimo si fa male il ginocchio!)
-    if (!isBike) player.carDamage = Math.min(0.6, (player.carDamage || 0) + 0.12);
+  if (hit && Math.abs(player.speed) > 1.5 && player.bumpCooldown <= 0) {
+    const impact = Math.abs(player.speed);
+    // ad alta velocità l'auto si ferma di brutto, a passo d'uomo si smorza
+    player.speed *= impact > 8 ? 0.4 : 0.75;
+    // e il danno è proporzionale: un botta piano toglie pochissima vita,
+    // a tutta velocità l'auto si rovina sul serio (le bici mai!)
+    if (!isBike) player.carDamage = Math.min(0.6, (player.carDamage || 0) + impact * 0.01);
     player.bumpCooldown = 0.4;
     bumped = true;
   }
