@@ -70,13 +70,17 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
   const names = new Map();
 
   function nameOf (n, i) {
-    if (!names.has(n)) names.set(n, NAMES[(i + Math.floor(n.pos.x * 7 + n.pos.z * 3)) % NAMES.length]);
+    if (!names.has(n)) names.set(n, NAMES[mod(i + Math.floor(n.pos.x * 7 + n.pos.z * 3), NAMES.length)]);
     return names.get(n);
   }
   function roleOf (n, i) {
-    if (!roles.has(n)) roles.set(n, ROLES[(i + Math.floor(n.pos.z * 5 + n.pos.x * 11)) % ROLES.length]);
+    if (!roles.has(n)) roles.set(n, ROLES[mod(i + Math.floor(n.pos.z * 5 + n.pos.x * 11), ROLES.length)]);
     return roles.get(n);
   }
+  // resto della divisione SEMPRE positivo: con le coordinate negative
+  // (metà città è a ovest/sud) il % semplice dava indici negativi, il
+  // nome veniva vuoto e il ruolo undefined (e l'AI crashava!)
+  function mod (a, n) { return ((a % n) + n) % n; }
 
   // ---------- fumetto sopra la testa ----------
   function updateBubble () {

@@ -96,10 +96,10 @@ const STR = {
   talk_say: { it: '…o scrivi qui e premi Invio:', en: '…or type here and press Enter:', es: '…o escribe aquí y pulsa Enter:', ru: '…или напиши здесь и нажми Enter:' },
   talk_close: { it: '✕ Chiudi (Esc)', en: '✕ Close (Esc)', es: '✕ Cerrar (Esc)', ru: '✕ Закрыть (Esc)' },
   talk_mic_error: {
-    it: '🎤 Il microfono non è disponibile qui: scrivi il messaggio qui sotto!',
-    en: '🎤 The microphone is not available here: type your message below!',
-    es: '🎤 El micrófono no está disponible aquí: ¡escribe tu mensaje abajo!',
-    ru: '🎤 Микрофон здесь недоступен: напиши сообщение ниже!'
+    it: '🎤 Il riconoscimento vocale non esiste nel gioco installato (Electron non lo supporta): scrivi il messaggio qui sotto! Il microfono funziona solo giocando dal browser (Chrome/Edge).',
+    en: '🎤 Voice recognition does not exist in the installed game (Electron does not support it): type your message below! The microphone only works when playing from the browser (Chrome/Edge).',
+    es: '🎤 El reconocimiento de voz no existe en el juego instalado (Electron no lo admite): ¡escribe tu mensaje abajo! El micrófono solo funciona jugando desde el navegador (Chrome/Edge).',
+    ru: '🎤 Голосовое распознавание не работает в установленной игре (Electron его не поддерживает): напиши сообщение ниже! Микрофон работает только в браузере (Chrome/Edge).'
   },
   talk_need_key: {
     it: 'Per parlare con gli NPC serve una chiave API gratuita di <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (registrazione gratis, nessuna carta). Incollala qui sotto: resta salvata su questo PC.',
