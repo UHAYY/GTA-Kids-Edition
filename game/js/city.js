@@ -915,9 +915,12 @@ export function buildCity (scene, skipBlocks = new Set(), groundHoles = []) {
     put(new THREE.PlaneGeometry(TOWN_ROAD, R * 2), roadMat,
       t.x, y + 0.065, t.z, { rx: -HPI, receive: true });
 
-    // otto casette: due per quadrante, con tetto a punta e porta verso il paese
+    // otto casette: due per quadrante, con tetto a punta e porta verso il
+    // paese (una delle otto non si costruisce: il suo posticino, l'angolo
+    // interno sud-ovest, è riservato al mini-supermarket di heists.js)
     for (const [qx, qz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
       for (const [fx, fz] of [[0.62, 0.32], [0.32, 0.62]]) {
+        if (qx === -1 && qz === -1 && fx === 0.32) continue;
         const cx = t.x + qx * R * fx + (Math.random() - 0.5) * 2.4;
         const cz = t.z + qz * R * fz + (Math.random() - 0.5) * 2.4;
         const w = 7 + Math.random() * 3;

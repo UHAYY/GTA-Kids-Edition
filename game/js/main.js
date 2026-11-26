@@ -109,10 +109,12 @@ async function init () {
   // e i 4 garage sotterranei (2,2), (5,3), (2,6), (6,4)
   // più i 6 negozi rapinabili in più: banche (1,1) e (6,6), gioiellerie
   // (6,3) e (1,4), supermarket (3,1) e (4,6)
+  // più la terza fila: banca (5,1), gioielleria (2,3), supermarket (3,5)
   const SKIP = new Set([
     4 * GRID + 4, 3 * GRID + 3, 5 * GRID + 5, 2 * GRID + 5, 6 * GRID + 2, 1 * GRID + 6,
     2 * GRID + 2, 5 * GRID + 3, 2 * GRID + 6, 6 * GRID + 4,
-    1 * GRID + 1, 6 * GRID + 6, 6 * GRID + 3, 1 * GRID + 4, 3 * GRID + 1, 4 * GRID + 6
+    1 * GRID + 1, 6 * GRID + 6, 6 * GRID + 3, 1 * GRID + 4, 3 * GRID + 1, 4 * GRID + 6,
+    5 * GRID + 1, 2 * GRID + 3, 3 * GRID + 5
   ]);
   // sopra le rampe dei garage il prato è ritagliato: dall'esterno si vede
   // la discesa, come negli ingressi dei garage veri
@@ -345,6 +347,11 @@ async function init () {
     }
   }
 
+  // ---------- rapine e polizia ----------
+  // i negozi rapinabili (città + paesini) prima degli abitanti: così gli
+  // abitanti dei paesini nascono tenendo conto anche dei mini-supermarket
+  const heists = createHeists(scene, colliders);
+
   const cityNpcs = createNPCs(scene, 20, colliders, pois, assets.createEric);
   // gli abitanti dei tre paesini di montagna: vivono sulle terrazze in quota
   const townsfolk = createTownsfolk(scene, colliders, assets.createEric, 4);
@@ -387,8 +394,7 @@ async function init () {
     if (uiState === 'playing') bigmap.open();
   });
 
-  // ---------- rapine e polizia ----------
-  const heists = createHeists(scene, colliders);
+  // ---------- polizia ----------
   const police = createPolice(scene, assets, { colliders, roadCenters });
   // l'elicottero della polizia: da 4 stelle in su ti sorvola e ti segue.
   // L'unico scampo: salire in montagna finché non ti perde di vista.
