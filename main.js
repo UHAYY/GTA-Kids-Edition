@@ -58,6 +58,9 @@ function createWindow () {
     title: 'Auto Avventure — Kids City',
     backgroundColor: '#8fd3f0',
     autoHideMenuBar: true,
+    // l'icona della finestra (e della barra delle applicazioni):
+    // la stessa del gioco, già dentro l'exe una volta pacchettizzato
+    icon: path.join(__dirname, 'build', 'icon.ico'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

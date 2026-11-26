@@ -24,6 +24,7 @@
       "main.js",
       "game/**/*",
       "3d/**/*",
+      "build/icon.ico",
       "package.json"
     ],
     "asar": false,
@@ -34,6 +35,7 @@
       }
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
