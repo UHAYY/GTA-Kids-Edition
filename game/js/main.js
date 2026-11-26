@@ -396,6 +396,35 @@ async function init () {
 
   // ---------- polizia ----------
   const police = createPolice(scene, assets, { colliders, roadCenters });
+
+  // rapina a parole ("Mani in alto!" detto a un passante nel dialogo):
+  // il portafoglio suo arriva subito, le stelle 2 secondi dopo — qualcuno
+  // deve accorgersene! E 4 se stai puntando la pistola ad acqua al poveretto
+  let wordRobbery = null; // { npc, t } mentre aspetti le stelle
+  talk.onRobbery = (npc, amount) => {
+    missions.coins += amount;
+    hud.coins.textContent = missions.coins.toLocaleString(locale());
+    sfx.coin();
+    hud.toast(tr('hands_up_money', { n: amount.toLocaleString(locale()) }));
+    wordRobbery = { npc, t: 2 };
+  };
+  function updateWordRobbery (dt) {
+    if (!wordRobbery) return;
+    wordRobbery.t -= dt;
+    if (wordRobbery.t > 0) return;
+    const n = wordRobbery.npc;
+    wordRobbery = null;
+    // "punti la pistola": in mano ce l'hai solo con le stelle già attive,
+    // e devi guardarlo (cono di vista di ~35°) da vicino
+    const dx = n.pos.x - player.pos.x, dz = n.pos.z - player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    const yaw = player.mode === 'drive' ? player.heading : player.yaw;
+    let da = Math.atan2(dx, dz) - yaw;
+    da = Math.atan2(Math.sin(da), Math.cos(da));
+    const aimed = police.stars > 0 && dist < 8 && Math.abs(da) < 0.6;
+    police.addStars(aimed ? 4 : 3, player);
+    hud.toast(tr(aimed ? 'hands_up_stars_gun' : 'hands_up_stars'));
+  }
   // l'elicottero della polizia: da 4 stelle in su ti sorvola e ti segue.
   // L'unico scampo: salire in montagna finché non ti perde di vista.
   const heli = createHelicopter(scene);
@@ -1040,6 +1069,9 @@ async function init () {
       // ----- sparare con F (solo quando la polizia ti da' la caccia) -----
       if (consumePress('KeyF')) police.playerShoot(player);
 
+      // ----- rapina a parole: le stelle arrivano 2 secondi dopo -----
+      updateWordRobbery(dt);
+
       // ----- polizia: stelle, inseguimenti, arresti -----
       policeCtx.player = player;
       policeCtx.playerPos = playerPos;
@@ -1092,6 +1124,9 @@ async function init () {
       // stai parlando con un passante: il mondo vive, tu sei fermo e la
       // camera guarda l'NPC da dietro alle tue spalle
       if (!talk.isOpen()) uiState = 'playing'; // chiuso col pulsante o Esc
+      // anche mentre chiacchieri il tempo della rapina a parole scorre:
+      // le stelle arrivano comunque 2 secondi dopo il "Mani in alto!"
+      updateWordRobbery(dt);
       updateNPCs(npcs, dt, colliders, carCircles, player.pos, playerCarCircles,
         () => { sfx.bump(); hud.toast(tr('npc_bump')); });
       crossers.updateCrossers(dt, carCircles, playerCarCircles, player.pos,

@@ -101,6 +101,37 @@ const STR = {
     es: '🎤 El reconocimiento de voz no existe en el juego instalado (Electron no lo admite): ¡escribe tu mensaje abajo! El micrófono solo funciona jugando desde el navegador (Chrome/Edge).',
     ru: '🎤 Голосовое распознавание не работает в установленной игре (Electron его не поддерживает): напиши сообщение ниже! Микрофон работает только в браузере (Chrome/Edge).'
   },
+  // rapina a parole ("Mani in alto!" nel dialogo)
+  robbery_words_give: {
+    it: '🤑 Oh no, prendi tutto! Ti do le mie {n} monete… non farmi del male!',
+    en: '🤑 Oh no, take everything! Here are my {n} coins… please don\'t hurt me!',
+    es: '🤑 ¡Ay no, toma todo! ¡Aquí tienes mis {n} monedas… no me hagas daño!',
+    ru: '🤑 Ой нет, возьми всё! Вот мои {n} монет… только не обижай меня!'
+  },
+  robbery_words_again: {
+    it: '😅 Ti ho già dato tutto quello che avevo, prometto!',
+    en: '😅 I already gave you everything I had, I promise!',
+    es: '😅 ¡Ya te di todo lo que tenía, lo prometo!',
+    ru: '😅 Я уже отдал тебе всё, что было, честно!'
+  },
+  hands_up_money: {
+    it: '🤑 Il passante spaventato ti ha consegnato {n} monete!',
+    en: '🤑 The scared passer-by handed you {n} coins!',
+    es: '🤑 ¡El peatón asustado te entregó {n} monedas!',
+    ru: '🤑 Испуганный прохожий отдал тебе {n} монет!'
+  },
+  hands_up_stars: {
+    it: '🚨 Qualcuno ci ha visto: tre stelle! Corri a nasconderti!',
+    en: '🚨 Someone saw you: three stars! Run and hide!',
+    es: '🚨 Alguien lo vio: ¡tres estrellas! ¡Corre a esconderte!',
+    ru: '🚨 Тебя кто-то увидел: три звезды! Беги и спрячься!'
+  },
+  hands_up_stars_gun: {
+    it: '🚨 Hai puntato la pistola ad acqua sul passante: quattro stelle! Corri!',
+    en: '🚨 You pointed the water pistol at the passer-by: four stars! Run!',
+    es: '🚨 Apuntaste con la pistola de agua al peatón: ¡cuatro estrellas! ¡Corre!',
+    ru: '🚨 Ты нацелил водяной пистолет на прохожего: четыре звезды! Беги!'
+  },
   talk_need_key: {
     it: 'Per parlare con gli NPC serve una chiave API gratuita di <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (registrazione gratis, nessuna carta). Incollala qui sotto: resta salvata su questo PC.',
     en: 'Talking to NPCs needs a free API key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (free sign-up, no card). Paste it below: it stays saved on this PC.',

@@ -68,6 +68,15 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
   const history = new Map();
   const roles = new Map();
   const names = new Map();
+  // i passanti già rapinati a parole: il portafoglio è vuoto, poveretti
+  const robbed = new Set();
+
+  // "Mani in alto!" e varianti, in quattro lingue (senza accenti, il
+  // riconoscimento vocale a volte li scrive, a volte no)
+  const ROBBERY_RE = /man[ìi]\s*in\s*alto|mani\s+(su|al|alto)|alza\s+(le\s+)?mani|hands?\s*up|manos\s*arriba|руки\s*вверх/;
+  function norm (s) {
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
 
   function nameOf (n, i) {
     if (!names.has(n)) names.set(n, NAMES[mod(i + Math.floor(n.pos.x * 7 + n.pos.z * 3), NAMES.length)]);
@@ -225,6 +234,26 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
     stopMic();
     addMsg(tr('talk_you'), text, 'you');
 
+    // "Mani in alto!": rapina a parole. Il passante si spaventa e consegna
+    // il portafoglio (una volta sola: dopo è davvero allo sbando). Niente
+    // AI qui: le stelle le aggiunge main.js dopo 2 secondi (come una vera
+    // rapina, qualcuno deve accorgersene!)
+    if (ROBBERY_RE.test(norm(text))) {
+      const i = npcs.indexOf(npc);
+      const npcName = nameOf(npc, i);
+      const already = robbed.has(npc);
+      robbed.add(npc);
+      const amount = 200 + Math.floor(Math.random() * 301); // 200–500 monete
+      const reply = already
+        ? tr('robbery_words_again')
+        : tr('robbery_words_give', { n: amount.toLocaleString(locale()) });
+      addMsg(npcName, reply, 'npc');
+      setStatus('');
+      say(reply);
+      if (!already && api.onRobbery) api.onRobbery(npc, amount);
+      return;
+    }
+
     const i = npcs.indexOf(npc);
     const npcName = nameOf(npc, i);
     const role = roleOf(npc, i);
@@ -331,5 +360,7 @@ export function createTalk ({ npcs, player, camera, promptEl }) {
     if (e.key === 'Enter') keyBtn.click();
   });
 
-  return { tryTalk, close, isOpen, updateBubble };
+  // onRobbery: main.js lo imposta (soldi e stelle della rapina a parole)
+  const api = { tryTalk, close, isOpen, updateBubble, onRobbery: null };
+  return api;
 }
